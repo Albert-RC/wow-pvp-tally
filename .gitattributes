@@ -1,0 +1,8 @@
+# Keep LF line endings everywhere (the files are written with LF; WoW reads both).
+* text=auto eol=lf
+
+# Binary assets, should any be added.
+*.tga binary
+*.blp binary
+*.png binary
+*.ogg binary

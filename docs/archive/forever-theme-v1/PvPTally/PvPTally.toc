@@ -1,0 +1,46 @@
+## Interface: 16001
+## Title: PvP Tally
+## Notes: Keeps a tally of every world PvP kill and death, one row per enemy player.
+## Notes-esES: Registra cada kill y cada muerte en PvP de mundo, una fila por jugador enemigo.
+## Notes-esMX: Registra cada kill y cada muerte en PvP de mundo, una fila por jugador enemigo.
+## Version: 1.1.0
+## Category: Combat
+## Category-esES: Combate
+## Category-esMX: Combate
+## IconTexture: Interface\Icons\INV_Misc_Bone_HumanSkull_01
+## SavedVariables: PvPTallyDB
+## SavedVariablesPerCharacter: PvPTallyCharDB
+## AddonCompartmentFunc: PvPTally_OnAddonCompartmentClick
+
+# Self-contained: no dependencies on other addons. Spy's saved data is only read, when
+# it happens to be loaded, to offer a one-time import.
+
+Locales.lua
+
+# Core: pure logic, no game API calls.
+Core\Util.lua
+Core\Events.lua
+Core\Settings.lua
+Core\Store.lua
+Core\Races.lua
+
+# Game: the only layer that reads the WoW API, and the kill / death detection.
+Game\WowApi.lua
+Game\Tracker.lua
+
+# Features built on the core.
+Features\SpyImport.lua
+Features\TestData.lua
+Features\Notifications.lua
+
+# User interface.
+UI\Columns.lua
+UI\ListModel.lua
+UI\Themes.lua
+UI\Rows.lua
+UI\Window.lua
+UI\MinimapButton.lua
+UI\SettingsPanel.lua
+
+Commands.lua
+Init.lua
