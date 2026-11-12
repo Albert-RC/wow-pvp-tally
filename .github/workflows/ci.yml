@@ -1,0 +1,50 @@
+# Checks every pull request. Release runs these same jobs on each push to main before publishing.
+name: CI
+
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Luacheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: lunarmodules/luacheck@v1.2.0
+
+  test:
+    name: Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install LuaJIT
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y luajit
+      - name: Tests
+        shell: pwsh
+        run: ./scripts/test.ps1
+      - name: Release script
+        run: bash scripts/test-release.sh
+
+  package:
+    name: Package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the zip and the release notes
+        id: package
+        shell: pwsh
+        run: ./scripts/package.ps1
+      # The zip as it would be released, to try it in game before merging
+      - uses: actions/upload-artifact@v7
+        with:
+          path: .release/PvPTally-v${{ steps.package.outputs.version }}.zip
+          archive: false
+          include-hidden-files: true
+          if-no-files-found: error

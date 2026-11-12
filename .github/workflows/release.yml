@@ -1,0 +1,37 @@
+# On each push to main (a merged pull request): runs the CI checks, then publishes a GitHub release for the .toc
+# version unless it is already released (scripts/publish-release.sh). Pushes that don't change ## Version publish
+# nothing, and a run that failed halfway is completed by running it again.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    name: Publish
+    needs: checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the zip and the release notes
+        id: package
+        shell: pwsh
+        run: ./scripts/package.ps1
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: bash scripts/publish-release.sh

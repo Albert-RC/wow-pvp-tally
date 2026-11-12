@@ -4,6 +4,7 @@
 ## Notes-esES: Registra cada kill y cada muerte en PvP de mundo, una fila por jugador enemigo.
 ## Notes-esMX: Registra cada kill y cada muerte en PvP de mundo, una fila por jugador enemigo.
 ## Version: 1.1.0
+## Author: Albert-RC
 ## Category: Combat
 ## Category-esES: Combate
 ## Category-esMX: Combate

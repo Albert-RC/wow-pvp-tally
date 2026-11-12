@@ -75,7 +75,16 @@ Reglas:
 - **Datos guardados versionados.** `Store.Migrate` actualiza los datos de versiones anteriores paso a paso y descarta lo mal formado.
 - **Sin globales propias** salvo los SavedVariables, los comandos `/tally` y la función del menú de addons; cada módulo cuelga del espacio de nombres del addon.
 
-Las normas para implementar cambios (pensadas para agentes de IA, pero válidas para cualquiera) están en [AGENTS.md](AGENTS.md).
+## Publicar una versión
+
+Las versiones se publican en GitHub Releases y el zip se sube a CurseForge a mano:
+
+1. Sube `## Version` en `PvPTally/PvPTally.toc` y añade la sección `## vX.Y.Z (fecha)` a `CHANGELOG.md`.
+2. Haz commit en una rama y abre un pull request: `CI` ejecuta luacheck, los tests y construye el zip (queda como artefacto para probarlo en el juego).
+3. Al fusionar en `main`, `Release` repite las comprobaciones y publica la release `vX.Y.Z` con el zip y las notas. Si la versión ya está publicada, no hace nada.
+4. Sube ese zip a CurseForge. La descripción de la ficha está en [docs/curseforge/PvPTally.md](docs/curseforge/PvPTally.md).
+
+En local: `./scripts/test.ps1` (tests) y `./scripts/package.ps1` (zip y notas en `.release/`; exige que `PvPTally/`, `CHANGELOG.md` y `LICENSE` estén en un commit).
 
 ## Documentación
 
