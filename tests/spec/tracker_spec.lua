@@ -97,10 +97,10 @@ describe("Tracker", function()
 			T.eq(#store:Get("Kane-Mochivich").encounters, 1)
 		end)
 
-		it("ignores someone else's kill", function()
+		it("ignores the kill of someone outside our group", function()
 			tracker:OnPartyKill("Player-1-OTHER", KANE.guid)
 			T.isNil(store:Get("Kane-Mochivich"))
-			T.eq(tracker.lastKill.result, "not our kill")
+			T.eq(tracker.lastKill.result, "not our group's kill")
 		end)
 
 		it("counts a double PARTY_KILL once", function()
@@ -134,6 +134,88 @@ describe("Tracker", function()
 			game.byGUID[OTTO.guid] = { name = "Otto", realm = "", class = "PRIEST" }
 			tracker:OnPartyKill(game.playerGUID, OTTO.guid)
 			T.eq(#store:Get("Otto-Hofmann").encounters, 2)
+		end)
+	end)
+
+	describe("group kills", function()
+		local MATE, MATE_PET = "Player-1-MATE", "Pet-1-MATEPET"
+		before_each(function()
+			game.group[MATE] = true
+			game.group[MATE_PET] = true
+			-- Kane walks by: he is cached, but we do nothing to him yet.
+			game.SetUnit("nameplate1", "Kane-Mochivich", KANE)
+			tracker:Scan("nameplate1")
+		end)
+
+		it("counts a group member's killing blow when we had the enemy as target", function()
+			game.SetUnit("target", "Kane-Mochivich", KANE)
+			tracker:ScanAndNote("target")
+			tracker:OnPartyKill(MATE, KANE.guid)
+			local encounter = store:Get("Kane-Mochivich").encounters[1]
+			T.eq(encounter.r, Store.KILL)
+			T.eq(encounter.how, "group")
+			T.contains(tracker.lastKill.result, "group: Kane-Mochivich")
+			T.eq(#added, 1)
+		end)
+
+		it("counts it when the enemy had us targeted", function()
+			game.SetUnit("nameplate1", "Kane-Mochivich", KANE, true)
+			tracker:ScanAndNote("nameplate1")
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.eq(store:Get("Kane-Mochivich").encounters[1].how, "group")
+		end)
+
+		it("counts it when we were in combat with the enemy in sight (a healer)", function()
+			game.inCombat = true
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.eq(store:Get("Kane-Mochivich").encounters[1].how, "group")
+		end)
+
+		it("counts the killing blow of a group member's pet", function()
+			game.SetUnit("target", "Kane-Mochivich", KANE)
+			tracker:ScanAndNote("target")
+			tracker:OnPartyKill(MATE_PET, KANE.guid)
+			T.eq(#store:Get("Kane-Mochivich").encounters, 1)
+		end)
+
+		it("does not count it when we took no part", function()
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.isNil(store:Get("Kane-Mochivich"))
+			T.contains(tracker.lastKill.result, "did not take part")
+		end)
+
+		it("does not count it when we only saw the enemy out of combat", function()
+			game.inCombat = false
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.isNil(store:Get("Kane-Mochivich"))
+		end)
+
+		it("forgets participation older than the window", function()
+			game.SetUnit("target", "Kane-Mochivich", KANE)
+			tracker:ScanAndNote("target")
+			game.now = game.now + ns.Tracker.PARTICIPATION_WINDOW + 1
+			game.inCombat = true -- in combat with someone else, Kane long gone from sight
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.isNil(store:Get("Kane-Mochivich"))
+		end)
+
+		it("counts one kill when PARTY_KILL comes twice", function()
+			game.inCombat = true
+			tracker:OnPartyKill(MATE, KANE.guid)
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.eq(#store:Get("Kane-Mochivich").encounters, 1)
+		end)
+
+		it("still records our own killing blow as ours, not the group's", function()
+			tracker:OnPartyKill(game.playerGUID, KANE.guid)
+			T.eq(store:Get("Kane-Mochivich").encounters[1].how, "kill")
+		end)
+
+		it("ignores group kills outside the open world", function()
+			game.world = false
+			game.inCombat = true
+			tracker:OnPartyKill(MATE, KANE.guid)
+			T.isNil(store:Get("Kane-Mochivich"))
 		end)
 	end)
 

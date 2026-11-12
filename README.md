@@ -32,6 +32,7 @@ Copia (o enlaza) la carpeta `PvPTally/` en `World of Warcraft\_forever_\Interfac
 En Forever el combat log está cerrado a los addons:
 
 - **Kill**: el evento `PARTY_KILL` con tu golpe de gracia o el de tu mascota.
+- **Kill de tu grupo**: el golpe de gracia de un compañero de grupo o banda, o de su mascota, cuenta si participaste en la pelea. Participar es que en los 10 segundos anteriores tuvieras al enemigo en tu objetivo o foco, él te tuviera en el suyo, o estuvieras en combate con él a la vista. En el detalle sale como "Golpe de gracia de tu grupo". Cada jugador necesita tener PvP Tally instalado.
 - **Muerte**: `PLAYER_DEAD`. El asesino se lee del resumen de muerte (`C_DeathRecap`). Si no se puede, cuenta el único enemigo que te tenía en el objetivo en los 6 segundos anteriores.
 - Los datos del rival se leen de las placas de nombre, el objetivo, el foco y el mouseover.
 - Solo cuenta el mundo abierto: ni campos de batalla, ni arenas, ni instancias.

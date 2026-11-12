@@ -12,6 +12,8 @@ function FakeGame.New()
 		playerGUID = "Player-1-ME",
 		petGUID = nil,
 		byGUID = {},               -- guid -> PlayerInfoByGUID result
+		group = {},                -- guid -> true for group members and their pets
+		inCombat = false,          -- InCombat()
 		recap = nil,               -- DeathRecap() result
 		recapWhy = "unavailable",
 		timers = {},
@@ -37,6 +39,8 @@ function FakeGame.New()
 		return game.units[unit] ~= nil and game.units[unit].targetingMe == true
 	end
 	function game.OwnGUIDs() return game.playerGUID, game.petGUID end
+	function game.IsGroupGUID(guid) return game.group[guid] == true end
+	function game.InCombat() return game.inCombat end
 	function game.PlayerInfoByGUID(guid) return game.byGUID[guid] end
 	function game.CurrentContext()
 		local context = { t = game.epoch }

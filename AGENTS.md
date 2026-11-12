@@ -20,7 +20,7 @@ Ejemplos típicos de bloqueo: hace falta una librería u otro addon; hay que cre
 ## 1. Contexto del proyecto
 
 - Addon para **World of Warcraft: Forever**: cliente moderno (`## Interface: 16001`) sobre el mundo de Vanilla. El Lua es **5.1**.
-- **El combat log está cerrado a los addons.** Las kills se detectan con `PARTY_KILL` y las muertes con `PLAYER_DEAD` + `C_DeathRecap`, con la fallback del único enemigo que te tenía en el objetivo.
+- **El combat log está cerrado a los addons.** Las kills se detectan con `PARTY_KILL` (tuyas, de tu mascota, o de tu grupo si participaste: `Tracker:TookPart`) y las muertes con `PLAYER_DEAD` + `C_DeathRecap`, con la fallback del único enemigo que te tenía en el objetivo.
 - **Valores secretos:** el cliente puede devolver valores opacos que no se pueden comparar ni usar como clave. Todo valor leído del juego pasa por `Util.Readable`.
 - **Nombres:** los personajes tienen nombre y apellido. La clave de un jugador es `"Nombre-Apellido"` (la misma que usa Spy) y se muestra con espacio.
 - **Razas:** las de Vanilla más **Skyborne** (Cielonato de la Orden Eminente), que puede ser Alianza (raza 95) u Horda (96).

@@ -87,6 +87,28 @@ function WowApi.OwnGUIDs()
 	return R(UnitGUID("player")), R(UnitGUID("pet"))
 end
 
+-- Whether a GUID is a member of our party or raid, or one of their pets.
+function WowApi.IsGroupGUID(guid)
+	if type(guid) ~= "string" then
+		return false
+	end
+	local count = tonumber(R(GetNumGroupMembers())) or 0
+	if count == 0 then
+		return false
+	end
+	local raid = R(IsInRaid()) == true
+	local prefix = raid and "raid" or "party"
+	local last = raid and count or math.min(count, 4) -- party1..4 are the others
+	for index = 1, last do
+		for _, unit in ipairs({ prefix .. index, prefix .. "pet" .. index }) do
+			if R(UnitGUID(unit)) == guid then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- What the client tells of a player GUID: { name, realm, class, race, raceFile, sex }.
 function WowApi.PlayerInfoByGUID(guid)
 	local ok, _, class, race, raceFile, sex, name, realm = pcall(GetPlayerInfoByGUID, guid)

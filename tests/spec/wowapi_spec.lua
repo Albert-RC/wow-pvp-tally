@@ -135,6 +135,36 @@ describe("WowApi", function()
 		T.falsy(Api.AtlasExists("raceicon128-skyborne-male"))
 	end)
 
+	describe("IsGroupGUID", function()
+		it("is false when we are alone", function()
+			units.party1 = { guid = "Player-1-MATE" }
+			T.falsy(Api.IsGroupGUID("Player-1-MATE"))
+		end)
+
+		it("finds party members and their pets", function()
+			env.GetNumGroupMembers = function() return 3 end
+			units.party1 = { guid = "Player-1-MATE" }
+			units.partypet2 = { guid = "Pet-1-WOLF" }
+			T.truthy(Api.IsGroupGUID("Player-1-MATE"))
+			T.truthy(Api.IsGroupGUID("Pet-1-WOLF"))
+			T.falsy(Api.IsGroupGUID("Player-1-STRANGER"))
+		end)
+
+		it("finds raid members", function()
+			env.GetNumGroupMembers = function() return 12 end
+			env.IsInRaid = function() return true end
+			units.raid11 = { guid = "Player-1-RAIDER" }
+			T.truthy(Api.IsGroupGUID("Player-1-RAIDER"))
+		end)
+
+		it("ignores secret or missing GUIDs", function()
+			env.GetNumGroupMembers = function() return 2 end
+			units.party1 = { guid = env.Secret("Player-1-MATE") }
+			T.falsy(Api.IsGroupGUID("Player-1-MATE"))
+			T.falsy(Api.IsGroupGUID(nil))
+		end)
+	end)
+
 	it("knows when we are in combat", function()
 		T.falsy(Api.InCombat())
 		env.InCombatLockdown = function() return true end

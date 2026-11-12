@@ -281,6 +281,8 @@ function Wow.NewEnv(options)
 	env.GetGuildInfo = function() return nil end
 	env.GetPlayerInfoByGUID = function() return nil end
 	env.IsInInstance = function() return false, "none" end
+	env.GetNumGroupMembers = function() return 0 end
+	env.IsInRaid = function() return false end
 	env.GetZoneText = function() return "" end
 	env.GetSubZoneText = function() return "" end
 	env.C_Map = {

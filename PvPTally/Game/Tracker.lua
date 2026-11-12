@@ -4,7 +4,8 @@
 -- from what is still open:
 --   * enemy players are read from unit tokens (nameplates, target, focus, mouseover)
 --     and cached by GUID with their name, class, race, guild and level;
---   * a kill is PARTY_KILL with our GUID (or our pet's) as the attacker;
+--   * a kill is PARTY_KILL with our GUID (or our pet's) as the attacker, or a group
+--     member's (or his pet's) when we took part in the fight (see TookPart);
 --   * a death is PLAYER_DEAD; the killer comes from the death recap or, when the recap
 --     cannot say, from the one enemy player who had us targeted just before.
 -- Only the open world counts: battlegrounds, arenas and instances are ignored.
@@ -23,6 +24,7 @@ Tracker.SCAN_INTERVAL = 1        -- seconds between two scans of the visible ene
 Tracker.TARGETING_WINDOW = 6     -- seconds before a death that "had us targeted" counts
 Tracker.TARGETING_MEMORY = 60    -- seconds a targeting note is kept at all
 Tracker.KILL_DEDUP = 3           -- PARTY_KILL may fire twice for one death
+Tracker.PARTICIPATION_WINDOW = 10 -- seconds before a group kill that count as taking part
 Tracker.CACHE_LIMIT = 3000       -- enemies remembered by GUID before starting over
 Tracker.RECAP_STALE_AGE = 60     -- a recap older than this is from before a /reload
 Tracker.RECAP_RETRIES = { 0.5, 1.5, 3 } -- the recap is filled in shortly after PLAYER_DEAD
@@ -40,6 +42,8 @@ function Tracker.New(game, store)
 		cacheCount = 0,
 		guidByKey = {},      -- key -> guid
 		targetingMe = {},    -- key -> game.Now() when he last had us targeted
+		lastTargeted = {},   -- key -> game.Now() when we last had him as target or focus
+		lastSeen = {},       -- key -> game.Now() when we last saw him (any unit token)
 		nameplates = {},     -- "nameplateN" -> true while shown
 		recentKills = {},    -- guid -> game.Now()
 		lastRecapID = nil,
@@ -81,6 +85,7 @@ function Tracker:Scan(unit)
 	end
 	info.key = key
 	self:Remember(fresh.guid, info)
+	self.lastSeen[key] = self.game.Now()
 	-- Keep a known enemy's record up to date (guild, level...).
 	local player = self.store:Get(key)
 	if player then
@@ -91,7 +96,13 @@ end
 
 function Tracker:ScanAndNote(unit)
 	local key = self:Scan(unit)
-	if key and self.game.IsTargetingPlayer(unit) then
+	if not key then
+		return nil
+	end
+	if unit == "target" or unit == "focus" then
+		self.lastTargeted[key] = self.game.Now()
+	end
+	if self.game.IsTargetingPlayer(unit) then
 		self.targetingMe[key] = self.game.Now()
 	end
 	return key
@@ -114,8 +125,10 @@ function Tracker:ScanVisible()
 end
 
 function Tracker:Prune(now)
-	for key, when in pairs(self.targetingMe) do
-		if now - when > Tracker.TARGETING_MEMORY then self.targetingMe[key] = nil end
+	for _, notes in ipairs({ self.targetingMe, self.lastTargeted, self.lastSeen }) do
+		for key, when in pairs(notes) do
+			if now - when > Tracker.TARGETING_MEMORY then notes[key] = nil end
+		end
 	end
 	for guid, when in pairs(self.recentKills) do
 		if now - when > Tracker.KILL_DEDUP * 10 then self.recentKills[guid] = nil end
@@ -214,6 +227,38 @@ end
 
 -- Kills --------------------------------------------------------------------------------------------
 
+-- Whether we took part in the fight against an enemy in the last seconds: we had him as
+-- target or focus, he had us targeted, or we were in combat with him in sight (a healer
+-- rarely targets the enemy). Returns true and how, or false.
+function Tracker:TookPart(key, now)
+	local function recent(when)
+		return when ~= nil and now - when <= Tracker.PARTICIPATION_WINDOW
+	end
+	if recent(self.lastTargeted[key]) then
+		return true, "targeted"
+	end
+	if recent(self.targetingMe[key]) then
+		return true, "targeting us"
+	end
+	if recent(self.lastSeen[key]) and self.game.InCombat() then
+		return true, "in combat, in sight"
+	end
+	return false
+end
+
+-- Whose kill this is: "kill" (ours or our pet's), "group" (a group member's or his pet's),
+-- or nil.
+function Tracker:KillerKind(attackerGUID)
+	local playerGUID, petGUID = self.game.OwnGUIDs()
+	if attackerGUID == playerGUID or (petGUID ~= nil and attackerGUID == petGUID) then
+		return "kill"
+	end
+	if self.game.IsGroupGUID(attackerGUID) then
+		return "group"
+	end
+	return nil
+end
+
 function Tracker:OnPartyKill(attackerGUID, targetGUID)
 	if not self.game.IsWorldPvP() then
 		return
@@ -224,9 +269,9 @@ function Tracker:OnPartyKill(attackerGUID, targetGUID)
 		seen.result = "killer hidden"
 		return
 	end
-	local playerGUID, petGUID = self.game.OwnGUIDs()
-	if attackerGUID ~= playerGUID and attackerGUID ~= petGUID then
-		seen.result = "not our kill"
+	local how = self:KillerKind(attackerGUID)
+	if not how then
+		seen.result = "not our group's kill"
 		return
 	end
 	local key, info = self:ResolveGUID(targetGUID)
@@ -235,13 +280,21 @@ function Tracker:OnPartyKill(attackerGUID, targetGUID)
 		return
 	end
 	local now = self.game.Now()
+	if how == "group" then
+		local tookPart, why = self:TookPart(key, now)
+		if not tookPart then
+			seen.result = "group kill of " .. key .. ", we did not take part"
+			return
+		end
+		seen.why = why
+	end
 	if self.recentKills[targetGUID] and now - self.recentKills[targetGUID] < Tracker.KILL_DEDUP then
 		seen.result = "duplicate"
 		return
 	end
 	self.recentKills[targetGUID] = now
-	seen.result = "kill: " .. key
-	self.store:AddEncounter(key, NewEncounter(Store.KILL, self.game.CurrentContext(), info, "kill"), info)
+	seen.result = how .. ": " .. key .. (seen.why and (" (" .. seen.why .. ")") or "")
+	self.store:AddEncounter(key, NewEncounter(Store.KILL, self.game.CurrentContext(), info, how), info)
 end
 
 -- Deaths -------------------------------------------------------------------------------------------

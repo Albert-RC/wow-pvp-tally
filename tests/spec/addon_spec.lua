@@ -140,6 +140,27 @@ describe("Addon", function()
 			T.eq(player.encounters[1].oppLevel, 25)
 			T.contains(env.__chat[1], "You killed")
 		end)
+
+		it("records a group member's kill when we had the enemy targeted", function()
+			local ns, env = Addon.Start({ globals = {
+				GetNumGroupMembers = function() return 2 end,
+				UnitExists = function(unit) return unit == "target" end,
+				UnitIsPlayer = function() return true end,
+				UnitName = function() return "Kane", "Mochivich" end,
+				UnitIsEnemy = function() return true end,
+				UnitGUID = function(unit)
+					if unit == "player" then return "Player-1-ME" end
+					if unit == "party1" then return "Player-1-MATE" end
+					return "Player-1-AAA"
+				end,
+				UnitLevel = function(unit) return unit == "player" and 30 or 25 end,
+			} })
+			env.__fire("PLAYER_TARGET_CHANGED")
+			env.__fire("PARTY_KILL", "Player-1-MATE", "Player-1-AAA")
+			local encounter = ns.App.store:Get("Kane-Mochivich").encounters[1]
+			T.eq(encounter.how, "group")
+			T.contains(env.__chat[1], "Your group killed")
+		end)
 	end)
 
 	describe("options", function()

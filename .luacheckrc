@@ -35,7 +35,7 @@ files["PvPTally"] = {
 		"LEVEL", "YES", "NO", "UNKNOWNOBJECT", "FACTION_ALLIANCE", "FACTION_HORDE",
 		-- Game state
 		"GetLocale", "GetTime", "GetZoneText", "GetSubZoneText", "IsInInstance", "GetGuildInfo",
-		"GetPlayerInfoByGUID", "UnitClass", "UnitExists", "UnitFactionGroup", "UnitGUID", "UnitIsEnemy",
+		"GetPlayerInfoByGUID", "GetNumGroupMembers", "IsInRaid", "UnitClass", "UnitExists", "UnitFactionGroup", "UnitGUID", "UnitIsEnemy",
 		"UnitIsPlayer", "UnitIsUnit", "UnitLevel", "UnitName", "UnitRace", "UnitSex",
 		"C_CreatureInfo", "C_DeathRecap", "C_Map", "C_Texture", "C_Timer",
 	},

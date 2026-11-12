@@ -19,6 +19,12 @@ describe("Notifications", function()
 		T.contains(env.__chat[1], "(Kills 1 / Deaths 0)")
 	end)
 
+	it("prints a group kill as the group's", function()
+		store:AddEncounter("Cabo-Trancas", { t = 1, r = ns.Store.KILL, how = "group" })
+		T.contains(env.__chat[1], "Your group killed")
+		T.contains(env.__chat[1], "(Kills 1 / Deaths 0)")
+	end)
+
 	it("prints a death", function()
 		store:AddEncounter("Cabo-Trancas", { t = 1, r = ns.Store.DEATH })
 		T.contains(env.__chat[1], "killed you")

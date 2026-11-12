@@ -38,6 +38,7 @@ L.EXPAND_ALL = "Expand all"
 L.COLLAPSE_ALL = "Collapse all"
 
 L.NOTIFY_KILL = "You killed %s. %s"
+L.NOTIFY_GROUP_KILL = "Your group killed %s. %s"
 L.NOTIFY_DEATH = "%s killed you. %s"
 L.SCORE = "(Kills %d / Deaths %d)"
 
@@ -47,6 +48,7 @@ L.TT_HINT = "Click: show fights. Right-click: delete."
 L.TT_COORDS = "Coords: %.1f, %.1f"
 
 L.HOW_kill = "Your killing blow"
+L.HOW_group = "Killing blow by your group; you took part in the fight"
 L.HOW_recap = "Killer read from the death recap"
 L.HOW_targeting = "Killer guessed: the only enemy who had you targeted"
 L.HOW_spy = "Imported from Spy"
@@ -107,6 +109,7 @@ if locale == "esES" or locale == "esMX" then
 	L.COLLAPSE_ALL = "Contraer todo"
 
 	L.NOTIFY_KILL = "Has matado a %s. %s"
+	L.NOTIFY_GROUP_KILL = "Tu grupo ha matado a %s. %s"
 	L.NOTIFY_DEATH = "%s te ha matado. %s"
 
 	L.TT_FIRST = "Primer encuentro"
@@ -115,6 +118,7 @@ if locale == "esES" or locale == "esMX" then
 	L.TT_COORDS = "Coordenadas: %.1f, %.1f"
 
 	L.HOW_kill = "Golpe de gracia tuyo"
+	L.HOW_group = "Golpe de gracia de tu grupo; participaste en la pelea"
 	L.HOW_recap = "Asesino según el resumen de muerte"
 	L.HOW_targeting = "Asesino deducido: el único enemigo que te tenía en el objetivo"
 	L.HOW_spy = "Importado de Spy"

@@ -10,7 +10,10 @@ ns.Notifications = Notifications
 function Notifications.Message(key, encounter, player)
 	local kills, deaths = Store.Counts(player)
 	local name = Util.ColoredName(key, player.class)
-	local template = encounter.r == Store.KILL and L.NOTIFY_KILL or L.NOTIFY_DEATH
+	local template = L.NOTIFY_DEATH
+	if encounter.r == Store.KILL then
+		template = encounter.how == "group" and L.NOTIFY_GROUP_KILL or L.NOTIFY_KILL
+	end
 	return template:format(name, L.SCORE:format(kills, deaths))
 end
 
