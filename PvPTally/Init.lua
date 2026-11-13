@@ -48,9 +48,19 @@ function App.ConfirmDelete(key)
 	ns.Commands.ConfirmDelete(key)
 end
 
+-- The chat notification checkboxes of the options panel. kind: "kills" or "deaths".
+function App.IsNotifying(kind)
+	return ns.Settings.IsNotifying(App.settings, kind)
+end
+
+function App.SetNotify(kind, enabled)
+	ns.Settings.SetNotify(App.settings, kind, enabled)
+end
+
 function App.ToggleNotify()
-	App.settings.notify = not App.settings.notify
-	Util.Print(App.settings.notify and L.NOTIFY_ON or L.NOTIFY_OFF)
+	local enabled = ns.Settings.ToggleAllNotify(App.settings)
+	ns.SettingsPanel.Refresh()
+	Util.Print(enabled and L.NOTIFY_ON or L.NOTIFY_OFF)
 end
 
 function App.ToggleMinimap()

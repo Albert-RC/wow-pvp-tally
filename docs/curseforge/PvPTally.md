@@ -8,7 +8,8 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 - **Fight details:** click a row to see each encounter: result, local date and time, zone and subzone, and both levels.
 - **Group kills:** a killing blow by your party or raid counts if you took part in the fight.
 - **Sort, search and manage:** sort by any column, search by name, guild or zone, right-click to delete a player, resize the window.
-- **Blizzard-style UI**, minimap button, chat notifications (optional) and its own panel in Options > AddOns.
+- **Blizzard-style UI**, minimap button and its own panel in Options > AddOns.
+- **Chat notifications:** choose in the options whether to see a message for each kill, each death, both or neither.
 - **Import from Spy:** if Spy is loaded, you can import what it recorded.
 - **No dependencies:** no other addon or library required.
 - Available in **English** and **Spanish**.
@@ -20,7 +21,7 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 | `/tally` | Open or close the window |
 | `/tally settings` | Open the options |
 | `/tally import` | Import data from Spy |
-| `/tally notify` | Toggle chat notifications |
+| `/tally notify` | Turn all chat notifications on or off |
 | `/tally minimap` | Show or hide the minimap button |
 | `/tally reset` | Delete all data for this character |
 
