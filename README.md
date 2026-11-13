@@ -5,9 +5,12 @@ Addon para **World of Warcraft: Forever** que registra cada kill y cada muerte e
 - Una fila por jugador enemigo con el que te has enfrentado: icono de clase, raza (con insignia de bando para los Cielonato, que pueden ser Alianza u Horda), nivel, hermandad, **Kills**, **Deaths** y fecha del primer encuentro.
 - Al hacer clic en una fila se despliega cada enfrentamiento: resultado, fecha y hora local, zona y subzona, nivel del rival y tu nivel.
 - Se puede ordenar por cualquier columna, buscar por nombre, hermandad o zona, borrar un jugador con clic derecho y redimensionar la ventana (dentro de unos límites).
+- **Calavera en las placas de nombre:** los jugadores que ya están en tu lista llevan una calavera a la izquierda del nombre en su placa, sean enemigos o no, en el mundo y en los campos de batalla. Solo se ve en las placas que muestra el juego (hay que tener activadas las de enemigos y aliados). Se puede desactivar o cambiar de tamaño en Opciones.
+- **Calavera en el retrato:** como alternativa por si otro addon sustituye las placas de nombre (y con ellas la calavera), el retrato de tu objetivo y de tu foco se cubre con una calavera cuando ese jugador está en tu lista. Se puede desactivar en Opciones.
 - Interfaz con las plantillas de Blizzard: `ButtonFrameTemplate`, cabeceras de la lista de Quién, `ScrollBox`.
 - Panel propio en Opciones > AddOns del juego con:
   - **Chat:** una casilla para los mensajes de kills (tuyas o de tu grupo) y otra para los de muertes;
+  - **Calavera:** una casilla para la de las placas de nombre y su tamaño (pequeña, mediana o grande: 22, 28 o 36 píxeles; mediana por defecto), y otra para la del retrato del objetivo y el foco;
   - **Spy:** el botón **Importar de Spy** (activo solo cuando Spy está cargado).
 - En la lista de addons aparece en la categoría **Combate**.
 - **En el idioma del cliente:** inglés, alemán, español (España y Latinoamérica), francés, italiano, portugués, ruso, coreano y chino simplificado y tradicional. Las fechas siguen el orden de cada idioma y la clase sale en femenino cuando el idioma lo tiene.
@@ -29,7 +32,8 @@ Copia (o enlaza) la carpeta `PvPTally/` en `World of Warcraft\_forever_\Interfac
 | `/tally reset` | Borra todos los datos de este personaje |
 | `/tally debug` | Muestra por qué se contó o no la última kill o muerte |
 | `/tally test` | Añade jugadores de prueba (Test Reg y todas las razas en hombre y mujer) |
-| `/tally test clear` | Borra los jugadores de prueba |
+| `/tally test clear` | Borra los jugadores de prueba (también los de `/tally skull`) |
+| `/tally skull Nombre Apellido` | Añade ese jugador a la lista como jugador de prueba (con una kill inventada aquí y ahora) para ver la calavera en su placa sin pelear. Sin nombre, usa el jugador que tengas en el objetivo, aliado o enemigo. Un jugador que ya está en la lista no se toca |
 
 ## Cómo detecta las kills y muertes
 
@@ -39,7 +43,7 @@ En Forever el combat log está cerrado a los addons:
 - **Kill de tu grupo**: el golpe de gracia de un compañero de grupo o banda, o de su mascota, cuenta si participaste en la pelea. Participar es que en los 10 segundos anteriores tuvieras al enemigo en tu objetivo o foco, él te tuviera en el suyo, o estuvieras en combate con él a la vista. En el detalle sale como "Golpe de gracia de tu grupo". Cada jugador necesita tener PvP Tally instalado.
 - **Muerte**: `PLAYER_DEAD`. El asesino se lee del resumen de muerte (`C_DeathRecap`). Si no se puede, cuenta el único enemigo que te tenía en el objetivo en los 6 segundos anteriores.
 - Los datos del rival se leen de las placas de nombre, el objetivo, el foco y el mouseover.
-- Solo cuenta el mundo abierto: ni campos de batalla, ni arenas, ni instancias.
+- Solo cuenta el mundo abierto: ni campos de batalla, ni arenas, ni instancias. Las calaveras de las placas y del retrato sí se muestran en los campos de batalla, porque no registran nada.
 
 ## Arquitectura
 
@@ -57,7 +61,7 @@ PvPTally/
     Tracker.lua            detección de kills y muertes (recibe el adaptador inyectado)
   Features/
     SpyImport.lua          importación opcional de los SavedVariables de Spy
-    TestData.lua           jugadores de prueba
+    TestData.lua           jugadores de prueba (/tally test y /tally skull)
     Notifications.lua      avisos en el chat (escucha el bus)
   UI/
     Columns.lua            columnas, anchos y posiciones (puro)
@@ -65,6 +69,8 @@ PvPTally/
     Rows.lua               widgets de cada fila y tooltips
     Window.lua             ventana, cabeceras, búsqueda, redimensionado
     MinimapButton.lua      botón del minimapa
+    NameplateMarks.lua     calavera en las placas de los jugadores de la lista
+    PortraitMarks.lua      calavera sobre el retrato del objetivo y el foco
     SettingsPanel.lua      panel en Opciones > AddOns (API Settings de Blizzard)
   Commands.lua             comandos /tally y popups de confirmación
   Init.lua                 arranque: crea los objetos y los conecta
@@ -92,7 +98,8 @@ En local: `./scripts/test.ps1` (tests) y `./scripts/package.ps1` (zip y notas en
 
 ## Documentación
 
-- [docs/forever-client-ui.md](docs/forever-client-ui.md): cómo es la interfaz del cliente de Forever ("Camelot", atlas de la ventana de Habilidades, plantillas disponibles, comportamientos del cliente y cómo investigar en el juego).
+- [docs/forever-client-ui.md](docs/forever-client-ui.md): cómo es la interfaz del cliente de Forever ("Camelot", atlas de la ventana de Habilidades, plantillas disponibles, placas de nombre y retratos: cómo son y cómo añadirles iconos, el panel de Opciones, comportamientos del cliente y cómo investigar en el juego).
+- [docs/nameplate-marks.md](docs/nameplate-marks.md): la calavera en las placas de nombre y en el retrato del objetivo y el foco. Cómo está hecha, las decisiones, las pruebas en el juego y lo pendiente.
 - [docs/forever-theme.md](docs/forever-theme.md): el tema "Forever" (en pausa). Diseño, lo aprendido al probarlo y el prototipo archivado en `docs/archive/forever-theme-v1/`.
 
 ## Tests
@@ -111,6 +118,7 @@ luajit tests/run.lua
   - que el TOC no declara dependencias y que no se crean globales inesperadas;
   - el arranque con y sin Spy y la migración de datos antiguos;
   - una kill de principio a fin;
+  - la calavera de las placas: al aparecer, tras un `/reload`, con una kill nueva, en campos de batalla y con la opción;
   - la ventana: listar, desplegar, ordenar, buscar y redimensionar.
 
 Lint:

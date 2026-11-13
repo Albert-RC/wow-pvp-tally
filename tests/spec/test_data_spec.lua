@@ -57,6 +57,56 @@ describe("TestData", function()
 		T.eq(keys, { "Real-Enemy" })
 	end)
 
+	describe("/tally skull", function()
+		it("turns what was typed into a player key", function()
+			T.eq(TestData.KeyFromName("Kane Mochivich"), "Kane-Mochivich")
+			T.eq(TestData.KeyFromName("  Kane   Mochivich "), "Kane-Mochivich")
+			T.eq(TestData.KeyFromName("Cabo-Trancas"), "Cabo-Trancas")
+			T.eq(TestData.KeyFromName("Solo"), "Solo")
+			T.isNil(TestData.KeyFromName("   "))
+			T.isNil(TestData.KeyFromName(nil))
+		end)
+
+		it("adds a test player with one kill here and now", function()
+			local context = { t = 1800000000, zone = "Los Baldíos", subZone = "El Cruce", mapID = 1413, x = 0.5, y = 0.3, myLevel = 30 }
+			T.truthy(TestData.AddPlayer(store, "Kane-Mochivich", { class = "WARLOCK", level = 25 }, context))
+			local player = store:Get("Kane-Mochivich")
+			T.truthy(player.test)
+			T.eq(player.class, "WARLOCK")
+			T.eq(player.encounters, { {
+				t = 1800000000, r = Store.KILL, how = "test", zone = "Los Baldíos", subZone = "El Cruce",
+				mapID = 1413, x = 0.5, y = 0.3, oppLevel = 25, myLevel = 30,
+			} })
+		end)
+
+		it("works with only a name", function()
+			T.truthy(TestData.AddPlayer(store, "Kane-Mochivich", nil, { t = 5 }))
+			T.eq(#store:Get("Kane-Mochivich").encounters, 1)
+		end)
+
+		it("never touches a player already in the list", function()
+			store:AddEncounter("Kane-Mochivich", { t = 1, r = Store.DEATH }, nil, { silent = true })
+			T.falsy(TestData.AddPlayer(store, "Kane-Mochivich", nil, { t = 5 }))
+			local player = store:Get("Kane-Mochivich")
+			T.isNil(player.test)
+			T.eq(#player.encounters, 1)
+		end)
+
+		it("is removed with the other test players", function()
+			TestData.AddPlayer(store, "Kane-Mochivich", nil, { t = 5 })
+			TestData.Clear(store)
+			T.isNil(store:Get("Kane-Mochivich"))
+		end)
+
+		it("tells the window and the nameplates", function()
+			local bus = ns.Events.New()
+			local changes = 0
+			bus:On(ns.Events.DATA_CHANGED, function() changes = changes + 1 end)
+			TestData.AddPlayer(Store.New({}, bus), "Kane-Mochivich", nil, { t = 5 })
+			T.eq(changes, 1)
+		end)
+	end)
+
 	it("makes every fight valid and dated before now", function()
 		add()
 		for _, player in store:Players() do

@@ -16,6 +16,7 @@ describe("Commands", function()
 			ToggleNotify = record("ToggleNotify"),
 			AddTestData = record("AddTestData"),
 			ClearTestData = record("ClearTestData"),
+			AddSkullTest = function(name) calls[#calls + 1] = "AddSkullTest:" .. name end,
 		}
 		ns.Commands.Register(app)
 	end)
@@ -57,9 +58,17 @@ describe("Commands", function()
 		T.isNil(app.store:Get("Kane-Mochivich"))
 	end)
 
+	it("passes the name after skull as typed, keeping its case", function()
+		T.truthy(ns.Commands.Handle("skull Kane Mochivich"))
+		T.truthy(ns.Commands.Handle("  SKULL   Cabo-Trancas  "))
+		T.truthy(ns.Commands.Handle("skull"))
+		T.eq(calls, { "AddSkullTest:Kane Mochivich", "AddSkullTest:Cabo-Trancas", "AddSkullTest:" })
+	end)
+
 	it("prints the help for an unknown command", function()
 		T.falsy(ns.Commands.Handle("dance"))
 		T.contains(env.__chat[1], "/tally import")
+		T.contains(env.__chat[1], "/tally skull")
 	end)
 
 	it("prints diagnostics", function()

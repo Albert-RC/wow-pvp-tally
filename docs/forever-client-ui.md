@@ -1,6 +1,6 @@
 # La interfaz del cliente de WoW Forever
 
-Lo que sabemos del cliente de Forever para hacer interfaces con su aspecto. Está comprobado en el juego (noviembre de 2026) o leído en los addons de Forever instalados. Si algo cambia con un parche, actualiza este documento.
+Lo que sabemos del cliente de Forever para hacer interfaces con su aspecto y para tocar las placas de nombre y los retratos. Está comprobado en el juego (noviembre de 2026) o leído en los addons de Forever instalados. Si algo cambia con un parche, actualiza este documento.
 
 ## "Camelot" es el cliente, no un tema
 
@@ -62,6 +62,75 @@ Todos son atlas públicos: un addon puede usarlos con `texture:SetAtlas(nombre)`
 
 Otras texturas clásicas que siguen existiendo y otros addons de Forever usan: `Interface\DialogFrame\UI-DialogBox-Border` / `-Background` / `-Header`, `Interface\Tooltips\UI-Tooltip-Border`, `Interface\FrameGeneral\UI-Background-Rock`, `Interface\PaperDollInfoFrame\UI-Character-Skills-Bar` / `-BarBorder`.
 
+## Placas de nombre (nameplates)
+
+Comprobado en el juego en noviembre de 2026 y leído en BetterBlizzPlates (rama `forever/`) y en el port de Spy (`Spy/Forever.lua`). Uso en PvP Tally: [nameplate-marks.md](nameplate-marks.md).
+
+### Cómo son
+
+- **Son las del cliente moderno, no las de Classic.** BetterBlizzPlates trata Forever como "mainline" (`BBP.isMainline = BBP.isMidnight or BBP.isForever`).
+- **Estructura:**
+  - `nameplate`: el frame base, de `C_NamePlate.GetNamePlateForUnit(unit)` o de `C_NamePlate.GetNamePlates()`.
+  - `nameplate.UnitFrame`: el frame de Blizzard con el contenido:
+    - `.unit`: el token (`"nameplate3"`);
+    - `.name`: el FontString del nombre;
+    - `.HealthBarsContainer.healthBar`: la barra de vida;
+    - `.CastBarsContainer.castBar`, `.RaidTargetFrame`…
+- **Eventos:** `NAME_PLATE_UNIT_ADDED` y `NAME_PLATE_UNIT_REMOVED`, con el token como argumento.
+- **Tras un `/reload`** las placas que ya estaban en pantalla no vuelven a lanzar `ADDED`: hay que recorrer `C_NamePlate.GetNamePlates()` al arrancar.
+- **Se reciclan:** la misma placa pasa de una unidad a otra. Lo que se le añada hay que mostrarlo u ocultarlo de nuevo en **cada** `ADDED`; si no, se queda en la unidad siguiente.
+- **Hay muchas:** con mucha gente cerca se vieron tokens hasta `nameplate35`. No supongas un máximo pequeño.
+- **Placas prohibidas:** en instancias el cliente puede prohibir tocar algunas placas (cualquier llamada da error). Comprueba `IsForbidden()` en la placa y en su `UnitFrame` antes de usarlas, y llama a `C_NamePlate` con `pcall`.
+- **Los nombres se leen:** en el mundo, fuera de combate, `UnitName("nameplateN")` dio el nombre legible en 32 placas de 32 (ninguno secreto). `C_Secrets.ShouldUnitIdentityBeSecret(unit)` dice si el cliente va a ocultar una identidad. ⚠️ Sin comprobar: enemigos en combate y campos de batalla.
+
+### Añadirles un icono
+
+- **Una textura propia por placa, creada una sola vez:** `nameplate:CreateTexture(nil, "OVERLAY")`, guardada en una tabla propia indexada por la placa (`textures[nameplate]`). No escribas campos en los frames de Blizzard: otros addons también los usan.
+- **Ánclala a `UnitFrame.name`** (por ejemplo `SetPoint("RIGHT", name, "LEFT", -2, 0)`): sigue al nombre aunque Blizzard o BetterBlizzPlates lo muevan. Si no hay `name`, encima de `UnitFrame`.
+- **Vuelve a aplicar lo que pueda cambiar** (icono, tamaño) cada vez que se muestra, no solo al crearla.
+- BetterBlizzPlates hace lo mismo con un frame propio sobre la barra de vida (`CreateFrame("Frame", nil, healthBar)`, estrato `DIALOG`), y con él muestra todos sus indicadores.
+- **Combate:** crear, mover y mostrar texturas propias no es una acción protegida, así que funciona en combate. No toques el tamaño, la posición ni la visibilidad de la placa de Blizzard.
+
+### Limitaciones
+
+- **Solo existen las placas que muestra el cliente.** Sin "Mostrar siempre las placas de nombre" (CVar `nameplateShowAll`) solo salen en combate; sin `nameplateShowEnemies` o `nameplateShowFriends` no salen las enemigas o las aliadas. También dependen de la distancia (`nameplateMaxDistance`).
+- **Los addons que sustituyen las placas** (Plater, Kui…) ocultan el `UnitFrame` de Blizzard, y con él lo que se le haya añadido. BetterBlizzPlates modifica las de Blizzard, así que con él sí se ve.
+
+### Texturas de calavera que existen
+
+| Textura | Comentario |
+| --- | --- |
+| `Interface\TargetingFrame\UI-TargetingFrame-Skull` | La del nivel "??". BetterBlizzPlates la pinta en sus placas. Pequeña y legible. |
+| `Interface\TargetingFrame\UI-RaidTargetingIcon_8` | La marca de banda: se confunde con una marca de verdad. |
+| `Interface\Icons\INV_Misc_Bone_HumanSkull_01`, `INV_Misc_Bone_Skull_02` | Iconos de objeto, cuadrados. Se ven bien recortados en redondo. |
+| atlas `DungeonSkull`, `Dungeon` | ✅ Existen (comprobado en el juego). Son los iconos de mazmorra del mapa. |
+
+## Retratos del objetivo y del foco
+
+Leído en BetterBlizzFrames (`forever/modules/bigDebuffs.lua`, `camelotFrames.lua`) y comprobado en el juego en noviembre de 2026. Uso en PvP Tally: `UI/PortraitMarks.lua`.
+
+- **Estructura:** `TargetFrame.TargetFrameContainer.Portrait` (la textura del retrato) y `.PortraitMask` (su máscara redonda). Lo mismo en `FocusFrame`. También existen `.FrameTexture` (el marco) y `.BossPortraitFrameTexture`.
+- **No cambies la textura de Blizzard.** Blizzard la redibuja cuando quiere (`UnitFramePortrait_Update`, al cambiar de objetivo o de retrato), y otros addons la enganchan (BetterBlizzFrames pone iconos de especialización con `hooksecurefunc("UnitFramePortrait_Update", …)`). Lo que pongas con `SetTexture` se pisa.
+- **Pon una textura propia encima:**
+  - `TargetFrameContainer:CreateTexture(nil, capa, nil, subnivel + 1)`, con la capa y el subnivel de `Portrait:GetDrawLayer()` (el subnivel como mucho vale 7). Así queda encima del retrato y debajo del marco;
+  - `SetAllPoints(Portrait)`.
+- **Recórtala con una máscara propia, no con `PortraitMask`.** Con la de Blizzard, un icono cuadrado se salía por el aro del marco (visto en el juego). Funciona una máscara propia:
+  ```lua
+  local mask = container:CreateMaskTexture()
+  mask:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+  mask:SetPoint("TOPLEFT", portrait, "TOPLEFT", 3, -3)
+  mask:SetPoint("BOTTOMRIGHT", portrait, "BOTTOMRIGHT", -3, 3)
+  texture:AddMaskTexture(mask)
+  ```
+  `TempPortraitAlphaMask` es la máscara redonda que usa BetterBlizzFrames en Forever. Los 3 px por dentro hacen que el aro tape el borde. ⚠️ Pendiente de confirmar en el juego que con este margen ya no se sale.
+- **Cuándo actualizar:** `PLAYER_TARGET_CHANGED` y `PLAYER_FOCUS_CHANGED`.
+- **Los addons que sustituyen los marcos de unidad** (ElvUI, Shadowed Unit Frames…) ocultan `TargetFrame`. Comprueba que existen `TargetFrameContainer` y `Portrait` antes de usarlos.
+
+## Panel de Opciones
+
+- **Las etiquetas de las casillas no saltan de línea.** Con `UICheckButtonTemplate`, un texto largo se sale de la ventana. Usa una etiqueta corta y pon la explicación en un FontString debajo, con `SetWidth` (unos 560 px) y `SetJustifyH("LEFT")`, que sí salta de línea.
+- **Desplegable:** `CreateFrame("DropdownButton", nil, parent, "WowStyle1DropdownTemplate")` y `dropdown:SetupMenu(function(_, root) root:CreateRadio(texto, estaElegido, elegir) end)`. Lo usan Syndicator, Baganator, Leatrix_Plus y Auctionator en Forever. Para que muestre un valor cambiado desde fuera, llama a `dropdown:GenerateMenu()`.
+
 ## Comportamientos del cliente que hay que tener en cuenta
 
 - **El tamaño de un frame se notifica más tarde.** Leer `GetWidth()` o `GetHeight()` puede disparar `OnSizeChanged` en ese mismo momento. Si el código está a medio cambiar el estado de la ventana, ese `OnSizeChanged` lo ve a medias (error real: `Window.lua:149` en el prototipo del tema Forever). Lee el tamaño antes de empezar y no actúes en `OnSizeChanged` a medio cambio. El WoW simulado de los tests reproduce este comportamiento.
@@ -88,3 +157,15 @@ Otras texturas clásicas que siguen existiendo y otros addons de Forever usan: `
   /run PvPTallyDB.dump={} PTD(CharacterFrame,PvPTallyDB.dump) print(#PvPTallyDB.dump)
   ```
   Al terminar, bórralo: `/run PvPTallyDB.dump=nil PTD=nil` y `/reload`.
+- **`/chatlog` no sirve para pasar resultados.** `Logs\WoWChatLog.txt` solo guarda los mensajes de chat de verdad, no lo que escribe `print`. Para que Claude lea algo, guárdalo en `PvPTallyDB.dump` y haz `/reload`, como arriba.
+- **Las capturas** (tecla Impr Pant) se guardan en `_forever_\Screenshots`, y Claude puede abrirlas. Son la forma más rápida de enseñar un problema visual.
+- **Un `/run` no llega a lo que crea el addon.** Sus frames y texturas cuelgan del espacio de nombres `ns`, no de globales. Buscarlos recorriendo las regiones de un frame no funcionó con las placas de nombre. Para ajustar algo del addon en directo hace falta un comando del addon (como el temporal `/tally skull size` con el que se eligieron los tamaños de la calavera).
+- **Probar sin pelear:** `/tally skull Nombre Apellido` (o `/tally skull` con un jugador en el objetivo) mete a ese jugador en la lista como dato de prueba. Se borra con `/tally test clear`.
+- **¿Se leen los nombres de las placas?** Guarda una línea por placa (token, nombre o `<secret>`, y si está prohibida) en `PvPTallyDB.dump`; luego `/reload`:
+  ```
+  /run local d={}PvPTallyDB.dump=d for _,p in ipairs(C_NamePlate.GetNamePlates())do local u=p.UnitFrame.unit local n=UnitName(u)d[#d+1]=u.." "..(issecretvalue(n)and"<secret>"or tostring(n)).." forbidden="..tostring(p.UnitFrame:IsForbidden())end print(#d)
+  ```
+- **Prueba de concepto con `/run`:** a lo que no es del addon sí se llega. Por ejemplo, esto pinta una calavera junto al nombre en todas las placas visibles (se guarda en `p.PTS` solo para la prueba):
+  ```
+  /run for _,p in ipairs(C_NamePlate.GetNamePlates())do local t=p.PTS or p:CreateTexture(nil,"OVERLAY")p.PTS=t t:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Skull")t:SetSize(16,16)t:SetPoint("RIGHT",p.UnitFrame.name,"LEFT",-2,0)t:Show()end
+  ```

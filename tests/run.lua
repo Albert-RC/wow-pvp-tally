@@ -27,6 +27,8 @@ local SPECS = {
 	"notifications_spec",
 	"columns_spec",
 	"list_model_spec",
+	"nameplate_marks_spec",
+	"portrait_marks_spec",
 	"settings_panel_spec",
 	"commands_spec",
 	"locales_spec",

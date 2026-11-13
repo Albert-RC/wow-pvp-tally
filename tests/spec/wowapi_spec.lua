@@ -60,6 +60,16 @@ describe("WowApi", function()
 		end)
 	end)
 
+	describe("ReadPlayer", function()
+		it("reads friendly players too", function()
+			local key, info = Api.ReadPlayer("focus")
+			T.eq(key, "Ally")
+			T.notNil(info)
+			T.eq(Api.ReadPlayer("target"), "Kane-Mochivich")
+			T.isNil(Api.ReadPlayer("mouseover"))
+		end)
+	end)
+
 	describe("IsWorldPvP", function()
 		it("is true in the open world", function()
 			T.truthy(Api.IsWorldPvP())
@@ -162,6 +172,41 @@ describe("WowApi", function()
 			units.party1 = { guid = env.Secret("Player-1-MATE") }
 			T.falsy(Api.IsGroupGUID("Player-1-MATE"))
 			T.falsy(Api.IsGroupGUID(nil))
+		end)
+	end)
+
+	describe("nameplates", function()
+		it("gives the nameplate of a unit token", function()
+			local nameplate = env.__showNamePlate("nameplate3")
+			T.truthy(Api.NamePlateForUnit("nameplate3") == nameplate)
+			T.isNil(Api.NamePlateForUnit("nameplate4"))
+			T.isNil(Api.NamePlateForUnit(nil))
+		end)
+
+		it("refuses forbidden nameplates", function()
+			env.__showNamePlate("nameplate1").__forbidden = true
+			env.__showNamePlate("nameplate2").UnitFrame.__forbidden = true
+			T.isNil(Api.NamePlateForUnit("nameplate1"))
+			T.isNil(Api.NamePlateForUnit("nameplate2"))
+			T.eq(Api.VisibleNamePlateUnits(), {})
+		end)
+
+		it("survives a client that raises or has no nameplate API", function()
+			env.__showNamePlate("nameplate1")
+			env.C_NamePlate.GetNamePlateForUnit = function() error("forbidden") end
+			env.C_NamePlate.GetNamePlates = function() error("forbidden") end
+			T.isNil(Api.NamePlateForUnit("nameplate1"))
+			T.eq(Api.VisibleNamePlateUnits(), {})
+			env.C_NamePlate = nil
+			T.isNil(Api.NamePlateForUnit("nameplate1"))
+			T.eq(Api.VisibleNamePlateUnits(), {})
+		end)
+
+		it("lists the unit tokens of the nameplates on screen", function()
+			env.__showNamePlate("nameplate1")
+			env.__showNamePlate("nameplate7")
+			env.__showNamePlate("nameplate9").UnitFrame.unit = env.Secret("nameplate9")
+			T.eq(Api.VisibleNamePlateUnits(), { "nameplate1", "nameplate7" })
 		end)
 	end)
 

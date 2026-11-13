@@ -80,12 +80,23 @@ Commands.ACTIONS = {
 	["test clear"] = function() app.ClearTestData() end,
 }
 
+-- Command word -> action that takes the rest of the line, as typed (names keep their case).
+Commands.ACTIONS_WITH_ARGUMENT = {
+	skull = function(argument) app.AddSkullTest(argument) end,
+}
+
 -- Runs a /tally command. Returns whether it was known (unknown ones print the help).
 function Commands.Handle(message)
 	local command = Util.Trim(message):lower():gsub("%s+", " ")
 	local action = Commands.ACTIONS[command]
 	if action then
 		action()
+		return true
+	end
+	local word, argument = Util.Trim(message):match("^(%S+)%s*(.-)$")
+	local withArgument = word and Commands.ACTIONS_WITH_ARGUMENT[word:lower()]
+	if withArgument then
+		withArgument(argument)
 		return true
 	end
 	Util.Print(L.HELP)
