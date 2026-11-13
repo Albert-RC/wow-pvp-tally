@@ -60,6 +60,9 @@ L.RESET_CONFIRM = "PvP Tally가 이 캐릭터에 대해 기록한 모든 전투�
 L.RESET_DONE = "이 캐릭터의 모든 데이터를 삭제했습니다."
 
 L.SETTINGS_BUTTON = "설정"
+L.SETTINGS_CHAT_HEADER = "대화"
+L.SETTINGS_NOTIFY_KILLS = "처치할 때마다 대화창에 메시지 표시 (나 또는 파티)"
+L.SETTINGS_NOTIFY_DEATHS = "죽을 때마다 대화창에 메시지 표시"
 L.SETTINGS_IN_COMBAT = "전투 중에는 설정을 열 수 없습니다."
 L.SETTINGS_UNAVAILABLE = "이 게임 클라이언트에는 애드온 설정 창이 없습니다."
 

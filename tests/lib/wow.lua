@@ -14,9 +14,11 @@
 local Wow = {}
 
 -- Frames ----------------------------------------------------------------------------------
--- Unknown Capitalized keys (methods, template children such as frame.Inset) are "magic":
--- callable, indexable, and returning more magic. Lowercase keys are plain fields (nil
--- until set), as in the real client.
+-- Unknown Capitalized keys are either methods the fake does not model or template children
+-- (frame.Inset, check.Text). They give a child frame that works as both: called as a
+-- method it does nothing and returns a new frame; used as a child it is a full fake frame
+-- that keeps its text, size and so on. Lowercase keys are plain fields (nil until set),
+-- as in the real client.
 
 local Frame = {}
 local FrameMeta
@@ -51,11 +53,14 @@ FrameMeta = {
 			return method
 		end
 		if type(key) == "string" and key:match("^%u") then
-			local child = Magic()
+			local child = NewFrame("Child", nil, rawget(self, "__env"))
 			rawset(self, key, child)
 			return child
 		end
 		return nil
+	end,
+	__call = function(self)
+		return NewFrame("Magic", nil, rawget(self, "__env"))
 	end,
 }
 
@@ -85,6 +90,14 @@ function Frame:Hide()
 end
 function Frame:SetShown(shown) if shown then self:Show() else self:Hide() end end
 function Frame:IsShown() return self.__shown end
+
+-- Checkboxes: a click flips the state before OnClick runs, as in the client (use Click).
+function Frame:SetChecked(checked) self.__checked = checked and true or false end
+function Frame:GetChecked() return self.__checked == true end
+function Frame:Click()
+	if self.__kind == "CheckButton" then self.__checked = not self.__checked end
+	self:RunScript("OnClick", "LeftButton")
+end
 
 function Frame:SetEnabled(enabled) self.__enabled = enabled and true or false end
 function Frame:Enable() self.__enabled = true end

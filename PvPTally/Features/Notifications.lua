@@ -17,10 +17,15 @@ function Notifications.Message(key, encounter, player)
 	return template:format(name, L.SCORE:format(kills, deaths))
 end
 
--- Listens on bus; settings.notify switches the messages on and off.
+-- The notification switch a fight answers to: "kills" (ours or the group's) or "deaths".
+function Notifications.Kind(encounter)
+	return encounter.r == Store.KILL and "kills" or "deaths"
+end
+
+-- Listens on bus; settings.notifyKills / notifyDeaths switch each kind of message.
 function Notifications.Attach(bus, settings)
 	bus:On(ns.Events.ENCOUNTER_ADDED, function(key, encounter, player)
-		if settings.notify then
+		if ns.Settings.IsNotifying(settings, Notifications.Kind(encounter)) then
 			Util.Print(Notifications.Message(key, encounter, player))
 		end
 	end)

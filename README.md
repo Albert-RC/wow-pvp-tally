@@ -6,7 +6,10 @@ Addon para **World of Warcraft: Forever** que registra cada kill y cada muerte e
 - Al hacer clic en una fila se despliega cada enfrentamiento: resultado, fecha y hora local, zona y subzona, nivel del rival y tu nivel.
 - Se puede ordenar por cualquier columna, buscar por nombre, hermandad o zona, borrar un jugador con clic derecho y redimensionar la ventana (dentro de unos límites).
 - Interfaz con las plantillas de Blizzard: `ButtonFrameTemplate`, cabeceras de la lista de Quién, `ScrollBox`.
-- Panel propio en Opciones > AddOns del juego, con el botón **Importar de Spy** (activo solo cuando Spy está cargado). En la lista de addons aparece en la categoría **Combate**.
+- Panel propio en Opciones > AddOns del juego con:
+  - **Chat:** una casilla para los mensajes de kills (tuyas o de tu grupo) y otra para los de muertes;
+  - **Spy:** el botón **Importar de Spy** (activo solo cuando Spy está cargado).
+- En la lista de addons aparece en la categoría **Combate**.
 - **En el idioma del cliente:** inglés, alemán, español (España y Latinoamérica), francés, italiano, portugués, ruso, coreano y chino simplificado y tradicional. Las fechas siguen el orden de cada idioma y la clase sale en femenino cuando el idioma lo tiene.
 - **Sin dependencias.** PvP Tally no necesita ningún otro addon ni librería. Si Spy está activo, la primera vez se ofrece importar lo que Spy registró; sin Spy, el addon funciona igual.
 
@@ -21,7 +24,7 @@ Copia (o enlaza) la carpeta `PvPTally/` en `World of Warcraft\_forever_\Interfac
 | `/tally` | Abre o cierra la ventana (también desde el botón del minimapa o el menú de addons) |
 | `/tally settings` | Abre las opciones en Opciones > AddOns (también `options`, `config`, el botón "Opciones" de la ventana o clic derecho en el botón del minimapa). No se pueden abrir en combate |
 | `/tally import` | Importa o sincroniza los datos de Spy (igual que el botón de Opciones) |
-| `/tally notify` | Activa o desactiva los avisos de kill/muerte en el chat |
+| `/tally notify` | Activa o desactiva a la vez los avisos de kills y de muertes en el chat. Cada uno por separado se elige en Opciones |
 | `/tally minimap` | Muestra u oculta el botón del minimapa |
 | `/tally reset` | Borra todos los datos de este personaje |
 | `/tally debug` | Muestra por qué se contó o no la última kill o muerte |

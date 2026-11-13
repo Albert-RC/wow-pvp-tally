@@ -60,6 +60,9 @@ L.RESET_CONFIRM = "Supprimer TOUS les combats enregistrés par PvP Tally pour ce
 L.RESET_DONE = "Toutes les données de ce personnage ont été supprimées."
 
 L.SETTINGS_BUTTON = "Options"
+L.SETTINGS_CHAT_HEADER = "Discussion"
+L.SETTINGS_NOTIFY_KILLS = "Afficher un message de discussion pour chaque victoire (la vôtre ou celle de votre groupe)"
+L.SETTINGS_NOTIFY_DEATHS = "Afficher un message de discussion pour chaque mort"
 L.SETTINGS_IN_COMBAT = "Impossible d'ouvrir les options en combat."
 L.SETTINGS_UNAVAILABLE = "Ce client de jeu n'a pas de panneau d'options pour les addons."
 

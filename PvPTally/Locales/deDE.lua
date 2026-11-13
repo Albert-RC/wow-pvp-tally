@@ -60,6 +60,9 @@ L.RESET_CONFIRM = "ALLE Kämpfe löschen, die PvP Tally für diesen Charakter au
 L.RESET_DONE = "Alle Daten dieses Charakters wurden gelöscht."
 
 L.SETTINGS_BUTTON = "Optionen"
+L.SETTINGS_CHAT_HEADER = "Chat"
+L.SETTINGS_NOTIFY_KILLS = "Bei jedem Sieg (deinem oder dem deiner Gruppe) eine Chatnachricht anzeigen"
+L.SETTINGS_NOTIFY_DEATHS = "Bei jedem Tod eine Chatnachricht anzeigen"
 L.SETTINGS_IN_COMBAT = "Die Optionen können im Kampf nicht geöffnet werden."
 L.SETTINGS_UNAVAILABLE = "Dieser Spielclient hat kein Optionsfenster für Addons."
 

@@ -60,6 +60,9 @@ L.RESET_CONFIRM = "要删除PvP Tally为此角色记录的所有战斗吗？"
 L.RESET_DONE = "此角色的所有数据已删除。"
 
 L.SETTINGS_BUTTON = "选项"
+L.SETTINGS_CHAT_HEADER = "聊天"
+L.SETTINGS_NOTIFY_KILLS = "每次击杀（你或你的队伍）时显示聊天消息"
+L.SETTINGS_NOTIFY_DEATHS = "每次死亡时显示聊天消息"
 L.SETTINGS_IN_COMBAT = "战斗中无法打开选项。"
 L.SETTINGS_UNAVAILABLE = "此游戏客户端没有插件选项面板。"
 

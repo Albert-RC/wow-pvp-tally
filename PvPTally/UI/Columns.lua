@@ -10,8 +10,11 @@ local L = ns.L
 local Columns = {}
 ns.Columns = Columns
 
-Columns.LIST_WIDTH = 660   -- the list at the smallest window
+Columns.LIST_WIDTH = 688   -- the list at the smallest window
 Columns.DETAIL_INDENT = 24 -- fight rows start this far right of player rows
+-- The "First fight" date ("11/11/26 20:22") in the row font. At 104 it was cut in game,
+-- and the column does not grow with the window.
+Columns.DATE_WIDTH = 132
 
 -- Player rows; they line up with the column headers.
 Columns.PLAYER = {
@@ -21,14 +24,14 @@ Columns.PLAYER = {
 	{ key = "guild",  label = L.COL_GUILD,  base = 132, grow = 0.5, justify = "LEFT" },
 	{ key = "kills",  label = L.COL_KILLS,  base = 56,  justify = "CENTER" },
 	{ key = "deaths", label = L.COL_DEATHS, base = 56,  justify = "CENTER" },
-	{ key = "first",  label = L.COL_FIRST,  base = 104, justify = "CENTER" },
+	{ key = "first",  label = L.COL_FIRST,  base = Columns.DATE_WIDTH, justify = "CENTER" },
 }
 
 -- Fight rows, inside an expanded player.
 Columns.DETAIL = {
 	{ key = "result", label = L.D_RESULT, base = 96,  justify = "LEFT" },
 	{ key = "date",   label = L.D_DATE,   base = 120, justify = "LEFT" },
-	{ key = "zone",   label = L.D_ZONE,   base = 280, grow = 1, justify = "LEFT" },
+	{ key = "zone",   label = L.D_ZONE,   base = 308, grow = 1, justify = "LEFT" },
 	{ key = "opp",    label = L.D_OPP,    base = 70,  justify = "CENTER" },
 	{ key = "mine",   label = L.D_MINE,   base = 70,  justify = "CENTER" },
 }

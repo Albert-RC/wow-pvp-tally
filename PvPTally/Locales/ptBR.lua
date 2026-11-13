@@ -61,6 +61,9 @@ L.RESET_CONFIRM = "Excluir TODOS os combates registrados pelo PvP Tally para est
 L.RESET_DONE = "Todos os dados deste personagem foram excluídos."
 
 L.SETTINGS_BUTTON = "Opções"
+L.SETTINGS_CHAT_HEADER = "Bate-papo"
+L.SETTINGS_NOTIFY_KILLS = "Mostrar uma mensagem no bate-papo a cada abate (seu ou do seu grupo)"
+L.SETTINGS_NOTIFY_DEATHS = "Mostrar uma mensagem no bate-papo a cada morte"
 L.SETTINGS_IN_COMBAT = "Não é possível abrir as opções em combate."
 L.SETTINGS_UNAVAILABLE = "Este cliente do jogo não tem painel de opções para addons."
 

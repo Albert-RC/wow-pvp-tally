@@ -70,6 +70,9 @@ L.RESET_DONE = "All data for this character was deleted."
 
 L.SETTINGS_BUTTON = "Options"
 L.SETTINGS_SPY_HEADER = "Spy"
+L.SETTINGS_CHAT_HEADER = "Chat"
+L.SETTINGS_NOTIFY_KILLS = "Show a chat message for every kill (yours or your group's)"
+L.SETTINGS_NOTIFY_DEATHS = "Show a chat message for every death"
 L.SETTINGS_IN_COMBAT = "The options cannot be opened in combat."
 L.SETTINGS_UNAVAILABLE = "This game client has no options panel for addons."
 

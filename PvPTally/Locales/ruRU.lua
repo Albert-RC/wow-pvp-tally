@@ -60,6 +60,9 @@ L.RESET_CONFIRM = "Удалить ВСЕ бои, записанные PvP Tally 
 L.RESET_DONE = "Все данные этого персонажа удалены."
 
 L.SETTINGS_BUTTON = "Настройки"
+L.SETTINGS_CHAT_HEADER = "Чат"
+L.SETTINGS_NOTIFY_KILLS = "Сообщение в чате о каждом убийстве (вашем или вашей группы)"
+L.SETTINGS_NOTIFY_DEATHS = "Сообщение в чате о каждой смерти"
 L.SETTINGS_IN_COMBAT = "Настройки нельзя открыть в бою."
 L.SETTINGS_UNAVAILABLE = "В этом клиенте игры нет панели настроек для модификаций."
 

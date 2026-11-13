@@ -7,7 +7,7 @@ describe("Notifications", function()
 		ns, env = Addon.LoadWith({ "Features/Notifications.lua" })
 		bus = ns.Events.New()
 		store = ns.Store.New({}, bus)
-		settings = { notify = true }
+		settings = { notifyKills = true, notifyDeaths = true }
 		ns.Notifications.Attach(bus, settings)
 	end)
 
@@ -31,10 +31,28 @@ describe("Notifications", function()
 		T.contains(env.__chat[1], "(Kills 0 / Deaths 1)")
 	end)
 
-	it("stays quiet when switched off", function()
-		settings.notify = false
+	it("stays quiet when both kinds are switched off", function()
+		settings.notifyKills, settings.notifyDeaths = false, false
 		store:AddEncounter("Cabo-Trancas", { t = 1, r = ns.Store.KILL })
+		store:AddEncounter("Cabo-Trancas", { t = 2, r = ns.Store.DEATH })
 		T.eq(#env.__chat, 0)
+	end)
+
+	it("leaves out kills, yours and your group's, when kill messages are off", function()
+		settings.notifyKills = false
+		store:AddEncounter("Cabo-Trancas", { t = 1, r = ns.Store.KILL })
+		store:AddEncounter("Cabo-Trancas", { t = 2, r = ns.Store.KILL, how = "group" })
+		store:AddEncounter("Cabo-Trancas", { t = 3, r = ns.Store.DEATH })
+		T.eq(#env.__chat, 1)
+		T.contains(env.__chat[1], "killed you")
+	end)
+
+	it("leaves out deaths when death messages are off", function()
+		settings.notifyDeaths = false
+		store:AddEncounter("Cabo-Trancas", { t = 1, r = ns.Store.DEATH })
+		store:AddEncounter("Cabo-Trancas", { t = 2, r = ns.Store.KILL })
+		T.eq(#env.__chat, 1)
+		T.contains(env.__chat[1], "You killed")
 	end)
 
 	it("stays quiet for imports", function()
