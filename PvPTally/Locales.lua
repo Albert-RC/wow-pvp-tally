@@ -59,6 +59,9 @@ L.RESET_DONE = "All data for this character was deleted."
 
 L.SETTINGS_BUTTON = "Options"
 L.SETTINGS_SPY_HEADER = "Spy"
+L.SETTINGS_CHAT_HEADER = "Chat"
+L.SETTINGS_NOTIFY_KILLS = "Show a chat message for every kill (yours or your group's)"
+L.SETTINGS_NOTIFY_DEATHS = "Show a chat message for every death"
 L.SETTINGS_IN_COMBAT = "The options cannot be opened in combat."
 L.SETTINGS_UNAVAILABLE = "This game client has no options panel for addons."
 
@@ -128,6 +131,8 @@ if locale == "esES" or locale == "esMX" then
 	L.RESET_DONE = "Se han borrado todos los datos de este personaje."
 
 	L.SETTINGS_BUTTON = "Opciones"
+	L.SETTINGS_NOTIFY_KILLS = "Mostrar un mensaje en el chat por cada kill (tuya o de tu grupo)"
+	L.SETTINGS_NOTIFY_DEATHS = "Mostrar un mensaje en el chat por cada muerte"
 	L.SETTINGS_IN_COMBAT = "No se pueden abrir las opciones en combate."
 	L.SETTINGS_UNAVAILABLE = "Este cliente del juego no tiene panel de opciones para addons."
 

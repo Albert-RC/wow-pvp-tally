@@ -95,7 +95,8 @@ describe("Addon", function()
 		it("starts with no saved data and no Spy", function()
 			local ns, env = Addon.Start()
 			T.eq(env.PvPTallyCharDB.version, ns.Store.SCHEMA_VERSION)
-			T.eq(env.PvPTallyDB.notify, true)
+			T.eq(env.PvPTallyDB.notifyKills, true)
+			T.eq(env.PvPTallyDB.notifyDeaths, true)
 			T.notNil(ns.App.tracker)
 			T.falsy(ns.App.store:IsImported("spy"))
 			T.eq(#env.__chat, 0)
@@ -208,6 +209,34 @@ describe("Addon", function()
 			T.truthy(panel.ImportButton.__enabled)
 			panel.ImportButton:RunScript("OnClick")
 			T.eq(#ns2.App.store:Get("Cabo-Trancas").encounters, 1)
+		end)
+
+		it("stops kill messages from the options checkbox, and keeps it for the next session", function()
+			local ns2, env2 = Addon.Start({ globals = {
+				UnitExists = function(unit) return unit == "target" end,
+				UnitIsPlayer = function() return true end,
+				UnitName = function() return "Kane", "Mochivich" end,
+				UnitIsEnemy = function() return true end,
+				UnitGUID = function(unit) return unit == "player" and "Player-1-ME" or "Player-1-AAA" end,
+			} })
+			local panel = env2.__settings.registered[1].frame
+			panel.NotifyChecks[1]:Click() -- kills
+			T.eq(env2.PvPTallyDB.notifyKills, false)
+			env2.__fire("PLAYER_TARGET_CHANGED")
+			env2.__fire("PARTY_KILL", "Player-1-ME", "Player-1-AAA")
+			T.eq(#ns2.App.store:Get("Kane-Mochivich").encounters, 1, "the kill is still recorded")
+			T.eq(#env2.__chat, 0, "but not announced")
+			T.eq(Addon.Start({ globals = { PvPTallyDB = env2.PvPTallyDB } }).App.settings.notifyKills, false)
+		end)
+
+		it("keeps the checkboxes in step with /tally notify", function()
+			local panel = env.__settings.registered[1].frame
+			env.SlashCmdList.PVPTALLY("notify")
+			T.falsy(panel.NotifyChecks[1]:GetChecked())
+			T.falsy(panel.NotifyChecks[2]:GetChecked())
+			env.SlashCmdList.PVPTALLY("notify")
+			T.truthy(panel.NotifyChecks[1]:GetChecked())
+			T.truthy(panel.NotifyChecks[2]:GetChecked())
 		end)
 
 		it("leaves the import button disabled without Spy", function()
