@@ -2,6 +2,7 @@
 
 local T, Addon = ...
 local describe, it, before_each = T.describe, T.it, T.before_each
+local Wow = require("wow")
 
 local function fileExists(path)
 	local handle = io.open(path, "rb")
@@ -62,7 +63,7 @@ describe("Addon", function()
 		it("loads every file without errors", function()
 			local ns = Addon.LoadAll()
 			for _, module in ipairs({ "Util", "Events", "Store", "Races", "WowApi", "Tracker", "SpyImport", "TestData",
-				"Columns", "ListModel", "Rows", "Window", "MinimapButton", "SettingsPanel", "Commands", "App" }) do
+				"Columns", "ListModel", "Rows", "Window", "MinimapButton", "NameplateMarks", "PortraitMarks", "SettingsPanel", "Commands", "App" }) do
 				T.notNil(ns[module], module)
 			end
 		end)
@@ -247,6 +248,225 @@ describe("Addon", function()
 		it("no longer has the import button in the main window", function()
 			ns.App.Toggle()
 			T.isNil(rawget(env.PvPTallyFrame, "ImportButton"))
+		end)
+	end)
+
+	describe("nameplate skulls", function()
+		-- Saved data with Kane in the list, fresh for each start (the store writes into it).
+		local function KaneSaved()
+			return { version = 2, players = { ["Kane-Mochivich"] = { name = "Kane", encounters = { { t = 5, r = "K" } } } } }
+		end
+
+		-- Who is behind each nameplate token: unit -> { name, realm, enemy }.
+		local function Start(people, extra)
+			local globals = {
+				PvPTallyCharDB = KaneSaved(),
+				UnitExists = function(unit) return people[unit] ~= nil end,
+				UnitIsPlayer = function(unit) return people[unit] ~= nil end,
+				UnitName = function(unit) return people[unit].name, people[unit].realm end,
+				UnitIsEnemy = function(_, unit) return people[unit] ~= nil and people[unit].enemy == true end,
+			}
+			for key, value in pairs(extra or {}) do globals[key] = value end
+			return Addon.Start({ globals = globals })
+		end
+
+		local function hasSkull(ns, nameplate)
+			local texture = ns.App.nameplateMarks.textures[nameplate]
+			return texture ~= nil and texture:IsShown()
+		end
+
+		it("marks a player of the list when the nameplate appears, friend or foe", function()
+			local people = { nameplate1 = { name = "Kane", realm = "Mochivich", enemy = false }, nameplate2 = { name = "Ally", realm = "Nobody" } }
+			local ns, env = Start(people)
+			local kane = env.__showNamePlate("nameplate1")
+			local ally = env.__showNamePlate("nameplate2")
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate2")
+			T.truthy(hasSkull(ns, kane))
+			T.falsy(hasSkull(ns, ally))
+
+			env.__fire("NAME_PLATE_UNIT_REMOVED", "nameplate1")
+			T.falsy(hasSkull(ns, kane))
+		end)
+
+		it("marks the nameplates already on screen after a /reload", function()
+			-- On screen before the addon starts listening: no NAME_PLATE_UNIT_ADDED for it.
+			local kane = Wow.NewFrame("Frame")
+			kane.UnitFrame = Wow.NewFrame("Frame")
+			kane.UnitFrame.unit = "nameplate1"
+			kane.UnitFrame.name = Wow.NewFrame("FontString")
+			local ns = Start({ nameplate1 = { name = "Kane", realm = "Mochivich" } }, { C_NamePlate = {
+				GetNamePlates = function() return { kane } end,
+				GetNamePlateForUnit = function(unit) return unit == "nameplate1" and kane or nil end,
+			} })
+			T.truthy(hasSkull(ns, kane))
+		end)
+
+		it("shows in battlegrounds too", function()
+			local people = { nameplate1 = { name = "Kane", realm = "Mochivich", enemy = true } }
+			local ns, env = Start(people, { IsInInstance = function() return true, "pvp" end })
+			local kane = env.__showNamePlate("nameplate1")
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+			T.truthy(hasSkull(ns, kane))
+		end)
+
+		it("marks an enemy as soon as the first fight with them is recorded", function()
+			local people = { nameplate1 = { name = "Tulan", realm = "Ator", enemy = true } }
+			local ns, env = Start(people, {
+				UnitGUID = function(unit) return unit == "player" and "Player-1-ME" or "Player-1-TULAN" end,
+			})
+			local tulan = env.__showNamePlate("nameplate1")
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+			T.falsy(hasSkull(ns, tulan))
+			env.__fire("PARTY_KILL", "Player-1-ME", "Player-1-TULAN")
+			T.notNil(ns.App.store:Get("Tulan-Ator"))
+			T.truthy(hasSkull(ns, tulan))
+		end)
+
+		it("is switched off and on from the options, and remembered", function()
+			local people = { nameplate1 = { name = "Kane", realm = "Mochivich" } }
+			local ns, env = Start(people)
+			local kane = env.__showNamePlate("nameplate1")
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+			local check = env.__settings.registered[1].frame.NameplateCheck
+			T.truthy(check:GetChecked())
+			check:Click()
+			T.falsy(hasSkull(ns, kane))
+			T.eq(env.PvPTallyDB.nameplateMarks, false)
+			T.falsy(Addon.Start({ globals = { PvPTallyDB = env.PvPTallyDB } }).App.IsMarkingNameplates())
+			check:Click()
+			T.truthy(hasSkull(ns, kane))
+		end)
+
+		describe("/tally skull", function()
+			it("puts the named player on the list, so their nameplate gets the skull", function()
+				local people = { nameplate1 = { name = "Tulan", realm = "Ator" } }
+				local ns, env = Start(people)
+				local tulan = env.__showNamePlate("nameplate1")
+				env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+				T.falsy(hasSkull(ns, tulan))
+
+				env.SlashCmdList.PVPTALLY("skull Tulan Ator")
+				T.truthy(ns.App.store:Get("Tulan-Ator").test)
+				T.truthy(hasSkull(ns, tulan))
+				T.contains(env.__chat[1], "Tulan Ator")
+				T.contains(env.__chat[1], "/tally test clear")
+
+				env.SlashCmdList.PVPTALLY("test clear")
+				T.isNil(ns.App.store:Get("Tulan-Ator"))
+				T.falsy(hasSkull(ns, tulan))
+			end)
+
+			it("takes the player in the target when no name is given", function()
+				local people = { target = { name = "Ally", realm = "Friend" } }
+				local ns, env = Start(people, { UnitClass = function() return "Sacerdote", "PRIEST" end })
+				env.SlashCmdList.PVPTALLY("skull")
+				T.eq(ns.App.store:Get("Ally-Friend").class, "PRIEST")
+			end)
+
+			it("explains how to use it without a name or a player in the target", function()
+				local ns, env = Start({})
+				T.falsy(ns.App.AddSkullTest(""))
+				T.contains(env.__chat[1], "Usage: /tally skull")
+			end)
+
+			it("leaves a player already in the list alone", function()
+				local ns, env = Start({})
+				env.SlashCmdList.PVPTALLY("skull Kane Mochivich")
+				T.contains(env.__chat[1], "already in your list")
+				T.isNil(ns.App.store:Get("Kane-Mochivich").test)
+			end)
+		end)
+
+		it("changes size from the options, at once, and keeps it", function()
+			local ns, env = Start({ nameplate1 = { name = "Kane", realm = "Mochivich" } })
+			local kane = env.__showNamePlate("nameplate1")
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+			local texture = ns.App.nameplateMarks.textures[kane]
+			T.eq(texture.__width, 28, "medium by default")
+
+			local large = env.__settings.registered[1].frame.MarkSizeDropdown:__menu()[3]
+			large.select()
+			T.eq({ texture.__width, texture.__height }, { 36, 36 })
+			T.truthy(large.isSelected())
+			T.eq(Addon.Start({ globals = { PvPTallyDB = env.PvPTallyDB } }).App.GetMarkSize(), 36)
+		end)
+
+		describe("over the portrait", function()
+			local function portraitSkull(ns, unit)
+				local texture = ns.App.portraitMarks.textures[unit]
+				return texture ~= nil and texture:IsShown()
+			end
+
+			it("covers the portrait of a target or focus in the list, and only theirs", function()
+				local people = { target = { name = "Kane", realm = "Mochivich" } }
+				local ns, env = Start(people)
+				env.__fire("PLAYER_TARGET_CHANGED")
+				T.truthy(portraitSkull(ns, "target"))
+				local texture = ns.App.portraitMarks.textures.target
+				T.truthy(texture.__parent == env.TargetFrame.TargetFrameContainer)
+				T.truthy(texture.__allPoints == env.TargetFrame.TargetFrameContainer.Portrait)
+				T.truthy(texture.__mask.__parent == env.TargetFrame.TargetFrameContainer)
+				T.eq({ texture.__layer, texture.__sublevel }, { "BACKGROUND", 2 }, "just above the portrait")
+				T.eq(texture.__file, ns.PortraitMarks.SKULL.file)
+				T.contains(texture.__file, "INV_Misc_Bone_HumanSkull_01")
+
+				people.target = { name = "Ally", realm = "Nobody" }
+				env.__fire("PLAYER_TARGET_CHANGED")
+				T.falsy(portraitSkull(ns, "target"))
+
+				people.focus = { name = "Kane", realm = "Mochivich" }
+				env.__fire("PLAYER_FOCUS_CHANGED")
+				T.truthy(portraitSkull(ns, "focus"))
+			end)
+
+			it("appears when the target enters the list, and goes with the option", function()
+				local people = { target = { name = "Tulan", realm = "Ator" } }
+				local ns, env = Start(people)
+				env.__fire("PLAYER_TARGET_CHANGED")
+				T.falsy(portraitSkull(ns, "target"))
+				env.SlashCmdList.PVPTALLY("skull")
+				T.truthy(portraitSkull(ns, "target"))
+
+				env.__settings.registered[1].frame.PortraitCheck:Click()
+				T.eq(env.PvPTallyDB.portraitMarks, false)
+				T.falsy(portraitSkull(ns, "target"))
+			end)
+
+			it("goes as soon as the player is deleted from the list", function()
+				local ns, env = Start({ target = { name = "Kane", realm = "Mochivich" } })
+				env.__fire("PLAYER_TARGET_CHANGED")
+				T.truthy(portraitSkull(ns, "target"))
+				ns.App.store:Delete("Kane-Mochivich")
+				T.falsy(portraitSkull(ns, "target"))
+			end)
+
+			it("keeps an error for /tally debug instead of breaking", function()
+				local people = {}
+				local ns, env = Start(people)
+				env.TargetFrame.TargetFrameContainer.CreateTexture = function() error("boom") end
+				people.target = { name = "Kane", realm = "Mochivich" }
+				env.__fire("PLAYER_TARGET_CHANGED")
+				T.contains(ns.Util.lastError, "PortraitMarks")
+				T.contains(ns.Util.lastError, "boom")
+			end)
+
+			it("does nothing when another addon took the target frame apart", function()
+				local ns, env = Start({ target = { name = "Kane", realm = "Mochivich" } }, { TargetFrame = false })
+				env.__fire("PLAYER_TARGET_CHANGED")
+				T.isNil(ns.App.portraitMarks.textures.target)
+				T.isNil(ns.Util.lastError)
+			end)
+		end)
+
+		it("keeps an error for /tally debug instead of breaking", function()
+			local people = { nameplate1 = { name = "Kane", realm = "Mochivich" } }
+			local ns, env = Start(people)
+			local nameplate = env.__showNamePlate("nameplate1")
+			nameplate.CreateTexture = function() error("boom") end -- only the skull touches the nameplate
+			env.__fire("NAME_PLATE_UNIT_ADDED", "nameplate1")
+			T.contains(ns.Util.lastError, "NameplateMarks")
+			T.contains(ns.Util.lastError, "boom")
 		end)
 	end)
 

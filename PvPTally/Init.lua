@@ -2,7 +2,8 @@
 -- game. The only file that knows every module.
 --
 --   ADDON_LOADED  saved variables are ready: settings, store, races, UI, options panel, commands
---   PLAYER_LOGIN  the world is ready: tracker, minimap button, first-run Spy import
+--   PLAYER_LOGIN  the world is ready: tracker, nameplate and portrait skulls, minimap button,
+--                 first-run Spy import
 
 local ADDON_NAME, ns = ...
 local L, Util = ns.L, ns.Util
@@ -57,6 +58,42 @@ function App.SetNotify(kind, enabled)
 	ns.Settings.SetNotify(App.settings, kind, enabled)
 end
 
+-- The nameplate skull checkbox of the options panel.
+function App.IsMarkingNameplates()
+	return ns.Settings.IsMarkingNameplates(App.settings)
+end
+
+function App.SetNameplateMarks(enabled)
+	ns.Settings.SetNameplateMarks(App.settings, enabled)
+	if App.nameplateMarks then
+		App.nameplateMarks:Refresh()
+	end
+end
+
+-- The portrait skull checkbox of the options panel.
+function App.IsMarkingPortraits()
+	return ns.Settings.IsMarkingPortraits(App.settings)
+end
+
+function App.SetPortraitMarks(enabled)
+	ns.Settings.SetPortraitMarks(App.settings, enabled)
+	if App.portraitMarks then
+		App.portraitMarks:Refresh()
+	end
+end
+
+-- The skull size picker of the options panel (one of Settings.MARK_SIZES).
+function App.GetMarkSize()
+	return ns.Settings.MarkSize(App.settings)
+end
+
+function App.SetMarkSize(size)
+	ns.Settings.SetMarkSize(App.settings, size)
+	if App.nameplateMarks then
+		App.nameplateMarks:Refresh()
+	end
+end
+
 function App.ToggleNotify()
 	local enabled = ns.Settings.ToggleAllNotify(App.settings)
 	ns.SettingsPanel.Refresh()
@@ -80,6 +117,28 @@ function App.AddTestData()
 	}
 	local count = ns.TestData.Add(App.store, labels, function(raceID) return App.races:Name(raceID) end, ns.WowApi.Time())
 	Util.Print(L.TEST_ADDED:format(count))
+end
+
+-- /tally skull [First Last]: puts a player in the list as test data, so their nameplate
+-- shows the skull. Without a name, the player in the target, friend or foe.
+function App.AddSkullTest(name)
+	local key, info
+	if name and name ~= "" then
+		key = ns.TestData.KeyFromName(name)
+	else
+		key, info = ns.WowApi.ReadPlayer("target")
+	end
+	if not key then
+		Util.Print(L.SKULL_USAGE)
+		return false
+	end
+	local display = Util.ColoredName(key, info and info.class)
+	if not ns.TestData.AddPlayer(App.store, key, info, ns.WowApi.CurrentContext()) then
+		Util.Print(L.SKULL_EXISTS:format(display))
+		return false
+	end
+	Util.Print(L.SKULL_ADDED:format(display))
+	return true
 end
 
 function App.ClearTestData()
@@ -123,8 +182,60 @@ local function StartTracker()
 	end))
 end
 
+-- The skulls on the nameplates. Not tied to the tracker: they show in battlegrounds too.
+local function StartNameplateMarks()
+	local marks = ns.NameplateMarks.New({
+		playerKey = ns.WowApi.PlayerKey,
+		namePlateFor = ns.WowApi.NamePlateForUnit,
+		lookup = function(key) return App.store:Get(key) end,
+		isEnabled = function() return ns.Settings.IsMarkingNameplates(App.settings) end,
+		size = App.GetMarkSize,
+	})
+	App.nameplateMarks = marks
+	local events = CreateFrame("Frame")
+	for _, event in ipairs({ "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED" }) do
+		pcall(events.RegisterEvent, events, event)
+	end
+	events:SetScript("OnEvent", Util.Guard("NameplateMarks", function(_, event, unit)
+		if event == "NAME_PLATE_UNIT_ADDED" then
+			marks:Show(unit)
+		else
+			marks:Remove(unit)
+		end
+	end))
+	-- After a /reload the nameplates are already on screen.
+	for _, unit in ipairs(ns.WowApi.VisibleNamePlateUnits()) do
+		marks:Show(unit)
+	end
+	-- A new player in the list (or one deleted) gets (or loses) the skull at once.
+	ns.bus:On(ns.Events.DATA_CHANGED, function() marks:Refresh() end)
+end
+
+-- The skull over the portrait of the target and focus frames: the fallback for when
+-- another addon replaces the nameplates.
+local function StartPortraitMarks()
+	local marks = ns.PortraitMarks.New({
+		frames = { target = TargetFrame, focus = FocusFrame },
+		playerKey = ns.WowApi.PlayerKey,
+		lookup = function(key) return App.store:Get(key) end,
+		isEnabled = function() return ns.Settings.IsMarkingPortraits(App.settings) end,
+	})
+	App.portraitMarks = marks
+	local events = CreateFrame("Frame")
+	for _, event in ipairs({ "PLAYER_TARGET_CHANGED", "PLAYER_FOCUS_CHANGED" }) do
+		pcall(events.RegisterEvent, events, event)
+	end
+	events:SetScript("OnEvent", Util.Guard("PortraitMarks", function(_, event)
+		marks:Update(event == "PLAYER_FOCUS_CHANGED" and "focus" or "target")
+	end))
+	marks:Refresh()
+	ns.bus:On(ns.Events.DATA_CHANGED, function() marks:Refresh() end)
+end
+
 local function OnPlayerLogin()
 	StartTracker()
+	StartNameplateMarks()
+	StartPortraitMarks()
 	ns.MinimapButton.Create(App)
 	-- First run on this character: bring in what Spy already knows, if Spy is around.
 	if not App.store:IsImported(ns.SpyImport.SOURCE) and ns.SpyImport.IsAvailable() then

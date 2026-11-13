@@ -29,7 +29,7 @@ files["PvPTally"] = {
 		-- Frames and UI
 		"CreateFrame", "UIParent", "Minimap", "GameTooltip", "UISpecialFrames", "DEFAULT_CHAT_FRAME",
 		"StaticPopup_Show", "PlaySound", "SOUNDKIT", "GetCursorPosition", "Settings", "InCombatLockdown",
-		"CreateDataProvider", "CreateScrollBoxListLinearView", "ScrollUtil",
+		"CreateDataProvider", "CreateScrollBoxListLinearView", "ScrollUtil", "TargetFrame", "FocusFrame",
 		-- Constants and tables
 		"RAID_CLASS_COLORS", "CLASS_ICON_TCOORDS", "LOCALIZED_CLASS_NAMES_MALE", "LOCALIZED_CLASS_NAMES_FEMALE",
 		"LEVEL", "YES", "NO", "UNKNOWNOBJECT", "FACTION_ALLIANCE", "FACTION_HORDE",
@@ -37,7 +37,7 @@ files["PvPTally"] = {
 		"GetLocale", "GetTime", "GetZoneText", "GetSubZoneText", "IsInInstance", "GetGuildInfo",
 		"GetPlayerInfoByGUID", "GetNumGroupMembers", "IsInRaid", "UnitClass", "UnitExists", "UnitFactionGroup", "UnitGUID", "UnitIsEnemy",
 		"UnitIsPlayer", "UnitIsUnit", "UnitLevel", "UnitName", "UnitRace", "UnitSex",
-		"C_CreatureInfo", "C_DeathRecap", "C_Map", "C_Texture", "C_Timer",
+		"C_CreatureInfo", "C_DeathRecap", "C_Map", "C_NamePlate", "C_Texture", "C_Timer",
 	},
 }
 

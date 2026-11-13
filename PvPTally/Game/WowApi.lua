@@ -55,11 +55,11 @@ function WowApi.PlayerKey(unit)
 	return name
 end
 
--- An enemy player behind a unit token: key and { guid, class, race, raceFile, sex, guild,
--- faction, level }. nil for anything else. level is nil for a skull (??).
-function WowApi.ReadEnemy(unit)
+-- A player behind a unit token, friend or foe: key and { guid, class, race, raceFile, sex,
+-- guild, faction, level }. nil for anything else. level is nil for a skull (??).
+function WowApi.ReadPlayer(unit)
 	local key = WowApi.PlayerKey(unit)
-	if not key or not R(UnitIsEnemy("player", unit)) then
+	if not key then
 		return nil
 	end
 	local _, class = UnitClass(unit)
@@ -75,6 +75,14 @@ function WowApi.ReadEnemy(unit)
 		faction = R((UnitFactionGroup(unit))),
 		level = level and level > 0 and level or nil,
 	}
+end
+
+-- The same, for an enemy player only.
+function WowApi.ReadEnemy(unit)
+	if not WowApi.PlayerKey(unit) or not R(UnitIsEnemy("player", unit)) then
+		return nil
+	end
+	return WowApi.ReadPlayer(unit)
 end
 
 function WowApi.IsTargetingPlayer(unit)
@@ -120,6 +128,57 @@ function WowApi.PlayerInfoByGUID(guid)
 		return nil
 	end
 	return { name = name, realm = R(realm), class = R(class), race = R(race), raceFile = R(raceFile), sex = tonumber(R(sex)) }
+end
+
+-- Nameplates ------------------------------------------------------------------------------------------
+-- In instances the client can forbid addons from touching some nameplates: any call on
+-- them raises an error. A frame that cannot even answer counts as forbidden.
+
+local function IsForbidden(frame)
+	if type(frame) ~= "table" or type(frame.IsForbidden) ~= "function" then
+		return false
+	end
+	local ok, forbidden = pcall(frame.IsForbidden, frame)
+	return not ok or R(forbidden) == true
+end
+
+-- The nameplate frame of a unit token ("nameplate3"), or nil when there is none or the
+-- client forbids touching it. Blizzard's own frame is nameplate.UnitFrame.
+function WowApi.NamePlateForUnit(unit)
+	if type(unit) ~= "string" or not (C_NamePlate and C_NamePlate.GetNamePlateForUnit) then
+		return nil
+	end
+	local ok, nameplate = pcall(C_NamePlate.GetNamePlateForUnit, unit)
+	if not ok or type(nameplate) ~= "table" or IsForbidden(nameplate) then
+		return nil
+	end
+	if type(nameplate.UnitFrame) ~= "table" or IsForbidden(nameplate.UnitFrame) then
+		return nil
+	end
+	return nameplate
+end
+
+-- The unit tokens of the nameplates on screen now (after a /reload they are already
+-- there before the addon listens to NAME_PLATE_UNIT_ADDED).
+function WowApi.VisibleNamePlateUnits()
+	local units = {}
+	if not (C_NamePlate and C_NamePlate.GetNamePlates) then
+		return units
+	end
+	local ok, nameplates = pcall(C_NamePlate.GetNamePlates)
+	if not ok or type(nameplates) ~= "table" then
+		return units
+	end
+	for _, nameplate in ipairs(nameplates) do
+		local unitFrame = type(nameplate) == "table" and not IsForbidden(nameplate) and nameplate.UnitFrame
+		if type(unitFrame) == "table" and not IsForbidden(unitFrame) then
+			local unit = R(unitFrame.unit)
+			if type(unit) == "string" then
+				units[#units + 1] = unit
+			end
+		end
+	end
+	return units
 end
 
 -- Where we are --------------------------------------------------------------------------------------

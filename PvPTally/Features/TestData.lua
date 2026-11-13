@@ -5,11 +5,14 @@
 --   * every playable race as a man and as a woman, to check every race icon (Skyborne on
 --     both sides, since that race can be Alliance or Horde).
 --
+-- And /tally skull: a real player of your choice with one made-up kill, so their
+-- nameplate shows the skull without having to fight them.
+--
 -- Every test player is flagged `test`, so Clear removes them all and nothing else, and
 -- Add replaces them instead of piling up.
 
 local _, ns = ...
-local Store, Races = ns.Store, ns.Races
+local Util, Store, Races = ns.Util, ns.Store, ns.Races
 
 local TestData = {}
 ns.TestData = TestData
@@ -109,6 +112,43 @@ function TestData.Add(store, labels, raceName, now)
 
 	store:Changed()
 	return count
+end
+
+-- /tally skull ---------------------------------------------------------------------------------
+
+-- What the user typed, "First Last" or "First-Last", as a store key ("First-Last").
+-- nil for nothing.
+function TestData.KeyFromName(text)
+	if type(text) ~= "string" then
+		return nil
+	end
+	local key = Util.Trim(text):gsub("%s+", " ")
+	if key == "" then
+		return nil
+	end
+	if not key:find("-", 1, true) then
+		key = key:gsub(" ", "-", 1)
+	end
+	return key
+end
+
+-- Adds key as a test player with one kill at context (WowApi.CurrentContext: t, zone,
+-- subZone, mapID, x, y, myLevel). info is what is known of them (nil: only the name).
+-- A player already in the list is left alone (never mixed with test data): returns false.
+function TestData.AddPlayer(store, key, info, context)
+	assert(type(key) == "string" and key ~= "", "player key expected")
+	if store:Get(key) then
+		return false
+	end
+	context = context or {}
+	store:AddEncounter(key, {
+		t = context.t, r = Store.KILL, how = "test",
+		zone = context.zone, subZone = context.subZone, mapID = context.mapID, x = context.x, y = context.y,
+		oppLevel = info and info.level, myLevel = context.myLevel,
+	}, info, { silent = true })
+	store:Get(key).test = true
+	store:Changed()
+	return true
 end
 
 -- Removes every test player. Returns how many.

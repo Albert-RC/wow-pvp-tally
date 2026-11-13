@@ -2,15 +2,24 @@ local T, Addon = ...
 local describe, it, before_each = T.describe, T.it, T.before_each
 
 describe("SettingsPanel", function()
-	local ns, env, SettingsPanel, app, spyAvailable, imports, notifying
+	local ns, env, SettingsPanel, app, spyAvailable, imports, notifying, marking, markSize, portraits
 	before_each(function()
 		ns, env = Addon.LoadWith({ "UI/SettingsPanel.lua" })
 		SettingsPanel = ns.SettingsPanel
 		spyAvailable, imports = true, {}
 		notifying = { kills = true, deaths = false }
+		marking = true
+		markSize = 28
+		portraits = true
 		app = {
 			IsNotifying = function(kind) return notifying[kind] end,
 			SetNotify = function(kind, enabled) notifying[kind] = enabled end,
+			IsMarkingNameplates = function() return marking end,
+			SetNameplateMarks = function(enabled) marking = enabled end,
+			GetMarkSize = function() return markSize end,
+			SetMarkSize = function(size) markSize = size end,
+			IsMarkingPortraits = function() return portraits end,
+			SetPortraitMarks = function(enabled) portraits = enabled end,
 			IsSpyAvailable = function() return spyAvailable end,
 			ImportFromSpy = function(silent) imports[#imports + 1] = silent end,
 		}
@@ -70,6 +79,75 @@ describe("SettingsPanel", function()
 			SettingsPanel.Refresh()
 			T.falsy(check("kills"):GetChecked())
 			T.truthy(check("deaths"):GetChecked())
+		end)
+	end)
+
+	describe("Skull section", function()
+		it("has a checkbox for the skull, with its label and a note", function()
+			SettingsPanel.Register(app)
+			T.eq(canvas().NameplateHeader:GetText(), "Skull")
+			T.contains(canvas().NameplateCheck.Text:GetText(), "skull")
+			T.contains(canvas().NameplateNote:GetText(), "nameplates the game shows")
+		end)
+
+		it("shows the current setting and changes it when clicked", function()
+			SettingsPanel.Register(app)
+			T.truthy(canvas().NameplateCheck:GetChecked())
+			canvas().NameplateCheck:Click()
+			T.eq(marking, false)
+			canvas().NameplateCheck:Click()
+			T.eq(marking, true)
+		end)
+
+		it("offers three skull sizes and marks the one chosen", function()
+			SettingsPanel.Register(app)
+			T.eq(canvas().MarkSizeLabel:GetText(), "Skull size")
+			local entries = canvas().MarkSizeDropdown:__menu()
+			local texts, selected = {}, {}
+			for index, entry in ipairs(entries) do
+				texts[index] = entry.text
+				selected[index] = entry.isSelected()
+			end
+			T.eq(texts, { "Small", "Medium", "Large" })
+			T.eq(selected, { false, true, false })
+		end)
+
+		it("changes the size when one is picked", function()
+			SettingsPanel.Register(app)
+			canvas().MarkSizeDropdown:__menu()[3].select()
+			T.eq(markSize, 36)
+			canvas().MarkSizeDropdown:__menu()[1].select()
+			T.eq(markSize, 22)
+		end)
+
+		it("puts long explanations in notes that wrap, and keeps the sections in order", function()
+			SettingsPanel.Register(app)
+			for _, note in ipairs({ "NameplateNote", "PortraitNote", "SpyDescription" }) do
+				T.eq(canvas()[note].__width, 560, note .. " wraps instead of running out of the window")
+			end
+			T.truthy(canvas().SpyHeader.__points[1][2] == canvas().PortraitNote, "Spy below the skull section")
+			T.truthy(canvas().NameplateHeader.__points[1][2] == canvas().NotifyChecks[2], "skull below the chat section")
+		end)
+
+		it("has a checkbox for the skull over the portrait of the target and focus", function()
+			SettingsPanel.Register(app)
+			T.contains(canvas().PortraitCheck.Text:GetText(), "portrait of your target and focus")
+			T.contains(canvas().PortraitNote:GetText(), "another addon replaces the nameplates")
+			T.truthy(canvas().PortraitCheck:GetChecked())
+			canvas().PortraitCheck:Click()
+			T.eq(portraits, false)
+			portraits = true
+			SettingsPanel.Refresh()
+			T.truthy(canvas().PortraitCheck:GetChecked())
+		end)
+
+		it("follows changes made elsewhere when refreshed", function()
+			SettingsPanel.Register(app)
+			local generated = canvas().MarkSizeDropdown.__generated or 0
+			marking = false
+			SettingsPanel.Refresh()
+			T.falsy(canvas().NameplateCheck:GetChecked())
+			T.eq(canvas().MarkSizeDropdown.__generated, generated + 1, "the dropdown shows the size again")
 		end)
 	end)
 

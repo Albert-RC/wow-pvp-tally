@@ -9,6 +9,7 @@
 --   env.__popups             StaticPopup_Show calls
 --   env.__written            globals the addon set (name -> true)
 --   env.__clock              what GetTime() returns (change it to move time)
+--   env.__showNamePlate(unit) / env.__hideNamePlate(unit)   nameplates on screen
 --   env.Secret(value)        a "secret" value: issecretvalue() is true for it
 
 local Wow = {}
@@ -90,6 +91,23 @@ function Frame:Hide()
 end
 function Frame:SetShown(shown) if shown then self:Show() else self:Hide() end end
 function Frame:IsShown() return self.__shown end
+-- Blizzard's dropdown (Menu API): SetupMenu keeps the generator, frame:__menu() runs it
+-- and returns the radio entries { text, isSelected(), select() }.
+function Frame:SetupMenu(generator) self.__menuGenerator = generator end
+function Frame:GenerateMenu() self.__generated = (self.__generated or 0) + 1 end
+function Frame:__menu()
+	local entries = {}
+	local root = {
+		CreateRadio = function(_, text, isSelected, setSelected)
+			entries[#entries + 1] = { text = text, isSelected = isSelected, select = setSelected }
+		end,
+	}
+	self.__menuGenerator(self, root)
+	return entries
+end
+
+-- Forbidden frames (some nameplates in instances): set frame.__forbidden in a test.
+function Frame:IsForbidden() return self.__forbidden == true end
 
 -- Checkboxes: a click flips the state before OnClick runs, as in the client (use Click).
 function Frame:SetChecked(checked) self.__checked = checked and true or false end
@@ -141,7 +159,19 @@ function Frame:SetAtlas(atlas) self.__atlas, self.__file = atlas, nil end
 function Frame:SetTexture(file) self.__file, self.__atlas = file, nil end
 function Frame:SetTextColor(r, g, b) self.__color = { r, g, b } end
 
-function Frame:CreateTexture() return NewFrame("Texture", nil, self.__env) end
+function Frame:CreateTexture(_, layer, _, sublevel)
+	local texture = NewFrame("Texture", nil, self.__env)
+	texture.__layer, texture.__sublevel, texture.__parent = layer, sublevel, self
+	return texture
+end
+function Frame:GetDrawLayer() return self.__layer or "ARTWORK", self.__sublevel or 0 end
+function Frame:SetAllPoints(relative) self.__allPoints = relative or true end
+function Frame:AddMaskTexture(mask) self.__mask = mask end
+function Frame:CreateMaskTexture()
+	local mask = NewFrame("MaskTexture", nil, self.__env)
+	mask.__parent = self
+	return mask
+end
 function Frame:CreateFontString() return NewFrame("FontString", nil, self.__env) end
 function Frame:GetFontString()
 	self.__fontString = self.__fontString or NewFrame("FontString", nil, self.__env)
@@ -251,6 +281,15 @@ function Wow.NewEnv(options)
 	env.SlashCmdList = {}
 	env.UISpecialFrames = {}
 	env.UIParent = NewFrame("Frame", "UIParent", env)
+	-- The target and focus frames: Blizzard's portrait and its round mask, as on Forever.
+	for _, name in ipairs({ "TargetFrame", "FocusFrame" }) do
+		local frame = NewFrame("Frame", name, env)
+		frame.TargetFrameContainer = NewFrame("Frame", nil, env)
+		frame.TargetFrameContainer.Portrait = NewFrame("Texture", nil, env)
+		frame.TargetFrameContainer.Portrait.__layer, frame.TargetFrameContainer.Portrait.__sublevel = "BACKGROUND", 1
+		frame.TargetFrameContainer.PortraitMask = NewFrame("MaskTexture", nil, env)
+		env[name] = frame
+	end
 	env.Minimap = NewFrame("Frame", "Minimap", env)
 	env.GameTooltip = NewFrame("GameTooltip", "GameTooltip", env)
 	env.PlaySound = function() end
@@ -305,6 +344,36 @@ function Wow.NewEnv(options)
 	}
 	env.C_Texture = { GetAtlasInfo = function() return nil end }
 	env.InCombatLockdown = function() return false end
+
+	-- Nameplates: env.__nameplates maps a unit token to its nameplate frame, with Blizzard's
+	-- UnitFrame (its unit and name) inside. env.__showNamePlate(unit, nameplate) puts one
+	-- on screen (pass a nameplate to recycle it, as the client does) and returns it;
+	-- env.__hideNamePlate(unit) takes it away. Neither fires the events.
+	env.__nameplates = {}
+	function env.__showNamePlate(unit, nameplate)
+		if not nameplate then
+			nameplate = NewFrame("Frame", nil, env)
+			nameplate.UnitFrame = NewFrame("Frame", nil, env)
+			nameplate.UnitFrame.name = NewFrame("FontString", nil, env)
+		end
+		nameplate.UnitFrame.unit = unit
+		env.__nameplates[unit] = nameplate
+		return nameplate
+	end
+	function env.__hideNamePlate(unit)
+		env.__nameplates[unit] = nil
+	end
+	env.C_NamePlate = {
+		GetNamePlateForUnit = function(unit) return env.__nameplates[unit] end,
+		GetNamePlates = function()
+			local units = {}
+			for unit in pairs(env.__nameplates) do units[#units + 1] = unit end
+			table.sort(units)
+			local list = {}
+			for index, unit in ipairs(units) do list[index] = env.__nameplates[unit] end
+			return list
+		end,
+	}
 
 	-- Blizzard's Settings API: env.__settings records the categories and what was opened.
 	env.__settings = { categories = {}, registered = {}, opened = {} }
