@@ -51,6 +51,66 @@ describe("Races", function()
 			T.eq({ resolver:Token({ race = "Gnoma", sex = Races.MALE }) }, { "Gnome", Races.MALE })
 		end)
 
+		it("reads the feminine names of other languages", function()
+			local NAMES = {
+				deDE = { [3] = { "Zwerg", "Dwarf" }, [4] = { "Nachtelf", "NightElf" }, [7] = { "Gnom", "Gnome" },
+					[5] = { "Untoter", "Scourge" }, [6] = { "Tauren", "Tauren" }, [28] = { "Hochbergtauren", "HighmountainTauren" },
+					[27] = { "Nachtgeborener", "Nightborne" } },
+				frFR = { [1] = { "Humain", "Human" }, [3] = { "Nain", "Dwarf" }, [5] = { "Mort-vivant", "Scourge" },
+					[4] = { "Elfe de la nuit", "NightElf" } },
+				ptBR = { [3] = { "Anão", "Dwarf" }, [4] = { "Elfo Noturno", "NightElf" }, [5] = { "Morto-vivo", "Scourge" },
+					[10] = { "Elfo Sangrento", "BloodElf" } },
+				ruRU = { [7] = { "Гном", "Gnome" }, [3] = { "Дворф", "Dwarf" }, [4] = { "Ночной эльф", "NightElf" },
+					[10] = { "Эльф крови", "BloodElf" } },
+			}
+			local function resolve(locale, name)
+				local names = NAMES[locale]
+				local localized = Races.NewResolver(function(id)
+					if names[id] then return names[id][1], names[id][2] end
+				end, atlases)
+				return { localized:Token({ race = name }) }
+			end
+			T.eq(resolve("deDE", "Zwergin"), { "Dwarf", Races.FEMALE })
+			T.eq(resolve("deDE", "Nachtelfe"), { "NightElf", Races.FEMALE })
+			T.eq(resolve("deDE", "Gnomin"), { "Gnome", Races.FEMALE })
+			T.eq(resolve("deDE", "Untote"), { "Scourge", Races.FEMALE })
+			T.eq(resolve("deDE", "Taurin"), { "Tauren", Races.FEMALE })
+			T.eq(resolve("frFR", "Naine"), { "Dwarf", Races.FEMALE })
+			T.eq(resolve("frFR", "Humaine"), { "Human", Races.FEMALE })
+			T.eq(resolve("frFR", "Morte-vivante"), { "Scourge", Races.FEMALE })
+			T.eq(resolve("frFR", "Elfe de la nuit"), { "NightElf", Races.MALE })
+			T.eq(resolve("ptBR", "Anã"), { "Dwarf", Races.FEMALE })
+			T.eq(resolve("ptBR", "Elfa Noturna"), { "NightElf", Races.FEMALE })
+			T.eq(resolve("ptBR", "Morta-viva"), { "Scourge", Races.FEMALE })
+			T.eq(resolve("ruRU", "Гномка"), { "Gnome", Races.FEMALE })
+			T.eq(resolve("ruRU", "Дворфийка"), { "Dwarf", Races.FEMALE })
+			T.eq(resolve("ruRU", "Ночная эльфийка"), { "NightElf", Races.FEMALE })
+		end)
+
+		it("does not guess between two races with similar names", function()
+			local names = { [1] = { "Orca", "Orc" }, [2] = { "Orco", "OtherOrc" } }
+			local ambiguous = Races.NewResolver(function(id)
+				if names[id] then return names[id][1], names[id][2] end
+			end, atlases)
+			T.isNil(ambiguous:Token({ race = "Orcu" }))
+		end)
+
+		it("matches words by UTF-8 letters, not bytes", function()
+			local words = Races.Words("Anã Ночная")
+			T.eq(#words, 2)
+			T.eq(#words[1], 3)
+			T.eq(#words[2], 6)
+			T.truthy(Races.SameWord(Races.Words("Zwerg")[1], Races.Words("Zwergin")[1]))
+			T.falsy(Races.SameWord(Races.Words("Nachtelfe")[1], Races.Words("Nachtgeborene")[1]))
+		end)
+
+		it("tells the sex, known or guessed from the race", function()
+			T.eq(resolver:Sex({ sex = Races.MALE, race = "Gnoma" }), Races.MALE)
+			T.eq(resolver:Sex({ race = "Gnoma" }), Races.FEMALE)
+			T.eq(resolver:Sex({ race = "Gnomo" }), Races.MALE)
+			T.isNil(resolver:Sex({}))
+		end)
+
 		it("returns nil for an unknown race", function()
 			T.isNil(resolver:Token({ race = "Raza rara" }))
 			T.isNil(resolver:Token({}))

@@ -1,13 +1,29 @@
 ## Interface: 16001
 ## Title: PvP Tally
 ## Notes: Keeps a tally of every world PvP kill and death, one row per enemy player.
+## Notes-deDE: Zählt jeden Sieg und jeden Tod im Welt-PvP, eine Zeile pro gegnerischem Spieler.
 ## Notes-esES: Registra cada kill y cada muerte en PvP de mundo, una fila por jugador enemigo.
 ## Notes-esMX: Registra cada kill y cada muerte en PvP de mundo, una fila por jugador enemigo.
+## Notes-frFR: Compte chaque victoire et chaque mort en JcJ extérieur, une ligne par joueur ennemi.
+## Notes-itIT: Tiene il conto di ogni uccisione e di ogni morte nel PvP all'aperto, una riga per giocatore nemico.
+## Notes-koKR: 야외 PvP의 모든 처치와 죽음을 적 플레이어별로 한 줄씩 기록합니다.
+## Notes-ptBR: Registra cada abate e cada morte no PvP mundial, uma linha por jogador inimigo.
+## Notes-ruRU: Ведет счет убийств и смертей в открытом мире, по строке на каждого вражеского игрока.
+## Notes-zhCN: 记录每一次野外PvP击杀和死亡，每个敌方玩家一行。
+## Notes-zhTW: 記錄每一次野外PvP擊殺和死亡，每個敵方玩家一行。
 ## Version: 1.1.0
 ## Author: Albert-RC
 ## Category: Combat
+## Category-deDE: Kampf
 ## Category-esES: Combate
 ## Category-esMX: Combate
+## Category-frFR: Combat
+## Category-itIT: Combattimento
+## Category-koKR: 전투
+## Category-ptBR: Combate
+## Category-ruRU: Бой
+## Category-zhCN: 战斗
+## Category-zhTW: 戰鬥
 ## IconTexture: Interface\Icons\INV_Misc_Bone_HumanSkull_01
 ## SavedVariables: PvPTallyDB
 ## SavedVariablesPerCharacter: PvPTallyCharDB
@@ -16,7 +32,17 @@
 # Self-contained: no dependencies on other addons. Spy's saved data is only read, when
 # it happens to be loaded, to offer a one-time import.
 
-Locales.lua
+# Texts: English first (it creates ns.L), then each language overwrites what it translates.
+Locales\enUS.lua
+Locales\deDE.lua
+Locales\esES.lua
+Locales\frFR.lua
+Locales\itIT.lua
+Locales\koKR.lua
+Locales\ptBR.lua
+Locales\ruRU.lua
+Locales\zhCN.lua
+Locales\zhTW.lua
 
 # Core: pure logic, no game API calls.
 Core\Util.lua

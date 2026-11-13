@@ -11,7 +11,7 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 - **Blizzard-style UI**, minimap button, chat notifications (optional) and its own panel in Options > AddOns.
 - **Import from Spy:** if Spy is loaded, you can import what it recorded.
 - **No dependencies:** no other addon or library required.
-- Available in **English** and **Spanish**.
+- **Localized:** English, German, Spanish (EU and Latin America), French, Italian, Brazilian Portuguese, Russian, Korean and Chinese (Simplified and Traditional). Dates follow each language's order.
 
 ## Commands
 

@@ -31,7 +31,7 @@ files["PvPTally"] = {
 		"StaticPopup_Show", "PlaySound", "SOUNDKIT", "GetCursorPosition", "Settings", "InCombatLockdown",
 		"CreateDataProvider", "CreateScrollBoxListLinearView", "ScrollUtil",
 		-- Constants and tables
-		"RAID_CLASS_COLORS", "CLASS_ICON_TCOORDS", "LOCALIZED_CLASS_NAMES_MALE",
+		"RAID_CLASS_COLORS", "CLASS_ICON_TCOORDS", "LOCALIZED_CLASS_NAMES_MALE", "LOCALIZED_CLASS_NAMES_FEMALE",
 		"LEVEL", "YES", "NO", "UNKNOWNOBJECT", "FACTION_ALLIANCE", "FACTION_HORDE",
 		-- Game state
 		"GetLocale", "GetTime", "GetZoneText", "GetSubZoneText", "IsInInstance", "GetGuildInfo",

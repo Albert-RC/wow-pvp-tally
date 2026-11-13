@@ -45,11 +45,26 @@ end
 
 -- Tooltips ----------------------------------------------------------------------------------------
 
+-- The class name in the client's language, feminine for a woman where the language
+-- has one (Pícara, Schurkin...).
+function Rows.ClassName(class, sex)
+	if not class then
+		return nil
+	end
+	local names = sex == ns.Races.FEMALE and LOCALIZED_CLASS_NAMES_FEMALE or LOCALIZED_CLASS_NAMES_MALE
+	local name = names and names[class]
+	if not name and LOCALIZED_CLASS_NAMES_MALE then
+		name = LOCALIZED_CLASS_NAMES_MALE[class]
+	end
+	return name
+end
+
 local function ShowPlayerTooltip(row, item)
 	local player = item.player
 	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
 	GameTooltip:AddLine(Util.DisplayName(item.key), Util.ClassColor(player.class))
-	local className = player.class and LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[player.class]
+	local sex = row.view and row.view.races and row.view.races:Sex(player) or player.sex
+	local className = Rows.ClassName(player.class, sex)
 	local parts = {}
 	if player.level then parts[#parts + 1] = LEVEL .. " " .. player.level end
 	if player.race then parts[#parts + 1] = player.race end

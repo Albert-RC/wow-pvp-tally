@@ -78,12 +78,13 @@ function Util.ColoredName(key, class)
 	return Util.ColorText(Util.DisplayName(key), r, g, b)
 end
 
--- Local time. Short: "12/11/26 18:42", long: "12/11/2026 18:42".
+-- Local time, in the order of the client's language (L.DATE_SHORT / L.DATE_LONG).
+-- English: short "11/12/26 18:42", long "11/12/2026 18:42".
 function Util.FormatDate(t, long)
 	if type(t) ~= "number" then
 		return "-"
 	end
-	return date(long and "%d/%m/%Y %H:%M" or "%d/%m/%y %H:%M", t)
+	return date(long and ns.L.DATE_LONG or ns.L.DATE_SHORT, t)
 end
 
 -- Numbers ------------------------------------------------------------------------------------
