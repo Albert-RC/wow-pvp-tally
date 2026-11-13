@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.0 (2026-11-13)
+
+- Players already in your list now have a skull left of their name on their nameplate, friend or foe, in the open world and in battlegrounds. Turn on enemy and friendly nameplates in the game options to see it.
+- In case another addon replaces the nameplates, the portrait of your target and focus is covered with a skull too when they are in your list.
+- New Skull section in Options > AddOns > PvP Tally: turn the nameplate skull on or off, pick its size (small, medium or large), and turn the portrait skull on or off.
+- New `/tally skull First Last` (or `/tally skull` with a player targeted): adds that player as a test player, to see the skull without fighting them. `/tally test clear` removes them.
+
 ## v1.3.0 (2026-11-13)
 
 - Translated into every client language: German, French, Italian, Brazilian Portuguese, Russian, Korean and Chinese (Simplified and Traditional), besides English and Spanish. Each language has its own file in `Locales/`.

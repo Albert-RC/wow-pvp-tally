@@ -11,7 +11,7 @@
 ## Notes-ruRU: Ведет счет убийств и смертей в открытом мире, по строке на каждого вражеского игрока.
 ## Notes-zhCN: 记录每一次野外PvP击杀和死亡，每个敌方玩家一行。
 ## Notes-zhTW: 記錄每一次野外PvP擊殺和死亡，每個敵方玩家一行。
-## Version: 1.3.0
+## Version: 1.4.0
 ## Author: Albert-RC
 ## Category: Combat
 ## Category-deDE: Kampf
