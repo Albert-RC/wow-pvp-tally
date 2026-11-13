@@ -19,7 +19,7 @@ function Addon.ReadFile(path)
 	return content
 end
 
--- The TOC: { files = { "Locales.lua", "Core/Util.lua", ... }, fields = { Interface = "16001", ... } }
+-- The TOC: { files = { "Locales/enUS.lua", "Core/Util.lua", ... }, fields = { Interface = "16001", ... } }
 function Addon.Toc()
 	local toc = { files = {}, fields = {} }
 	for line in Addon.ReadFile(Addon.Path(Addon.NAME .. ".toc")):gmatch("[^\r\n]+") do
@@ -34,7 +34,16 @@ function Addon.Toc()
 end
 
 -- The files every module needs, in TOC order.
-Addon.CORE = { "Locales.lua", "Core/Util.lua", "Core/Events.lua", "Core/Settings.lua", "Core/Store.lua", "Core/Races.lua" }
+Addon.CORE = { "Core/Util.lua", "Core/Events.lua", "Core/Settings.lua", "Core/Store.lua", "Core/Races.lua" }
+
+-- The texts: every file under Locales/, in TOC order (English first).
+function Addon.LocaleFiles()
+	local files = {}
+	for _, file in ipairs(Addon.Toc().files) do
+		if file:find("^Locales/") then files[#files + 1] = file end
+	end
+	return files
+end
 
 -- Loads `files` (TOC order) into a new environment. options: see Wow.NewEnv.
 -- Returns the namespace and the environment.
@@ -52,6 +61,7 @@ end
 -- The core plus some more files.
 function Addon.LoadWith(extra, options)
 	local files = {}
+	for _, file in ipairs(Addon.LocaleFiles()) do files[#files + 1] = file end
 	for _, file in ipairs(Addon.CORE) do files[#files + 1] = file end
 	for _, file in ipairs(extra or {}) do files[#files + 1] = file end
 	return Addon.Load(files, options)

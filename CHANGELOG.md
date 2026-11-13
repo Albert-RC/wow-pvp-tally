@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Translated into every client language: German, French, Italian, Brazilian Portuguese, Russian, Korean and Chinese (Simplified and Traditional), besides English and Spanish. Each language has its own file in `Locales/`.
+- Dates follow the order of the client language (month first in US English, day first in most of Europe, year first in Korean and Chinese).
+- Class names in tooltips use the feminine form for female players where the language has one.
+- Races imported from Spy are now recognized in their feminine form in every language (Zwergin, Naine, Anã, Гномка...), not only Spanish, so their icons show.
+
 ## v1.2.0 (2026-11-13)
 
 - New Chat section in Options > AddOns > PvP Tally: choose whether to see a chat message for each kill (yours or your group's) and for each death. Fights are still recorded either way. Your previous setting is kept.

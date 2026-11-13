@@ -12,7 +12,7 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 - **Chat notifications:** choose in the options whether to see a message for each kill, each death, both or neither.
 - **Import from Spy:** if Spy is loaded, you can import what it recorded.
 - **No dependencies:** no other addon or library required.
-- Available in **English** and **Spanish**.
+- **Localized:** English, German, Spanish (EU and Latin America), French, Italian, Brazilian Portuguese, Russian, Korean and Chinese (Simplified and Traditional). Dates follow each language's order.
 
 ## Commands
 

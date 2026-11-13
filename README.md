@@ -10,6 +10,7 @@ Addon para **World of Warcraft: Forever** que registra cada kill y cada muerte e
   - **Chat:** una casilla para los mensajes de kills (tuyas o de tu grupo) y otra para los de muertes;
   - **Spy:** el botón **Importar de Spy** (activo solo cuando Spy está cargado).
 - En la lista de addons aparece en la categoría **Combate**.
+- **En el idioma del cliente:** inglés, alemán, español (España y Latinoamérica), francés, italiano, portugués, ruso, coreano y chino simplificado y tradicional. Las fechas siguen el orden de cada idioma y la clase sale en femenino cuando el idioma lo tiene.
 - **Sin dependencias.** PvP Tally no necesita ningún otro addon ni librería. Si Spy está activo, la primera vez se ofrece importar lo que Spy registró; sin Spy, el addon funciona igual.
 
 ## Instalación
@@ -44,7 +45,7 @@ En Forever el combat log está cerrado a los addons:
 
 ```
 PvPTally/
-  Locales.lua              textos (inglés y español)
+  Locales/                 textos: enUS.lua (base) y un archivo por idioma del cliente
   Core/                    lógica pura: no llama a la API del juego
     Util.lua               valores secretos, textos, fechas, colores
     Events.lua             bus publicar/suscribir entre módulos

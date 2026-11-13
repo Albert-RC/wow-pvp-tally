@@ -65,9 +65,20 @@ describe("Util", function()
 
 		it("formats dates short and long", function()
 			local t = os.time({ year = 2026, month = 11, day = 12, hour = 18, min = 42 })
-			T.eq(Util.FormatDate(t), "12/11/26 18:42")
-			T.eq(Util.FormatDate(t, true), "12/11/2026 18:42")
+			T.eq(Util.FormatDate(t), "11/12/26 18:42")
+			T.eq(Util.FormatDate(t, true), "11/12/2026 18:42")
 			T.eq(Util.FormatDate(nil), "-")
+		end)
+
+		it("orders dates the way the client's language does", function()
+			local t = os.time({ year = 2026, month = 11, day = 12, hour = 18, min = 42 })
+			local function format(locale, long)
+				return Addon.LoadWith({}, { locale = locale }).Util.FormatDate(t, long)
+			end
+			T.eq(format("esES"), "12/11/26 18:42")
+			T.eq(format("enGB", true), "12/11/2026 18:42")
+			T.eq(format("deDE"), "12.11.26 18:42")
+			T.eq(format("zhCN", true), "2026/11/12 18:42")
 		end)
 	end)
 
