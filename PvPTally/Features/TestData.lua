@@ -1,7 +1,7 @@
 -- PvP Tally: made-up players to try the window out (/tally test).
 --
---   * "Test Reg": a Gnome rogue with six fights in several zones and a few counts
---     without details;
+--   * "Test Reg": a Gnome rogue with six fights in several zones, a few counts
+--     without details and a note;
 --   * every playable race as a man and as a woman, to check every race icon (Skyborne on
 --     both sides, since that race can be Alliance or Horde).
 --
@@ -19,6 +19,7 @@ ns.TestData = TestData
 
 TestData.MAIN_KEY = "Test-Reg"
 TestData.GUILD = "Hermandad de Prueba"
+TestData.NOTE = "Hides in the bushes by the Crossroads. Always opens from stealth."
 
 local DAY, HOUR = 86400, 3600
 
@@ -82,6 +83,7 @@ function TestData.Add(store, labels, raceName, now)
 	}, MAIN_FIGHTS, now)
 	local main = store:Get(TestData.MAIN_KEY)
 	main.extraKills, main.extraDeaths = 2, 1 -- also shows the "without details" line
+	store:SetNote(TestData.MAIN_KEY, TestData.NOTE, { silent = true })
 
 	local count, index = 1, 0
 	for _, race in ipairs(Races.LIST) do

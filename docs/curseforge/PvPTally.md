@@ -9,6 +9,7 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 - **Group kills:** a killing blow by your party or raid counts if you took part in the fight.
 - **Skull on nameplates:** players already in your list get a skull next to their name on their nameplate, friend or foe, in the open world and in battlegrounds. Its size (small, medium or large) and whether it shows are chosen in the options.
 - **Skull on the portrait:** in case another addon replaces the nameplates, the portrait of your target and focus is covered with a skull when they are in your list. Can be turned off in the options.
+- **Notes:** write your own note on any player in the list ("camps the flight master", "always opens from stealth"...). The note icon lights up when a player has one, and the note shows in the row's tooltip and in the game's tooltip when you mouse over that player in the world.
 - **Sort, search and manage:** sort by any column, search by name, guild or zone, right-click to delete a player, resize the window.
 - **Blizzard-style UI**, minimap button and its own panel in Options > AddOns.
 - **Chat notifications:** choose in the options whether to see a message for each kill, each death, both or neither.

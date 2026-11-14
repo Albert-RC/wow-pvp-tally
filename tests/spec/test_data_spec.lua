@@ -27,6 +27,12 @@ describe("TestData", function()
 		T.eq(store:Get("Test-Humano mujer").sex, ns.Races.FEMALE)
 	end)
 
+	it("gives Test Reg a note and nobody else, so both note buttons can be seen", function()
+		add()
+		T.eq(store:Get(TestData.MAIN_KEY).note, TestData.NOTE)
+		T.isNil(store:Get("Test-Humano mujer").note)
+	end)
+
 	it("adds Skyborne on both sides, told apart by faction", function()
 		add()
 		T.eq(store:Get("Test-Cielonato hombre (Alianza)").faction, "Alliance")

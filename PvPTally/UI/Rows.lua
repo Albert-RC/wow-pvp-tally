@@ -5,7 +5,7 @@
 --   layout    the Columns.Layout in use
 --   expanded  { [key] = true } for players shown open
 --   races     the icon resolver (race, faction and class icons)
---   OnToggle(key), OnDelete(key)
+--   OnToggle(key), OnDelete(key), OnEditNote(key)
 
 local _, ns = ...
 local L, Util, ListModel = ns.L, ns.Util, ns.ListModel
@@ -19,6 +19,8 @@ local CLASS_ICON_SIZE = 26
 local RACE_ICON_SIZE = 30
 local FACTION_BADGE_SIZE = 16
 local RESULT_ICON_SIZE = 20
+local NOTE_SIZE = 20
+local NOTE_DIM_ALPHA = 0.35 -- the note button of a player without a note
 local NAME_OFFSET = 4 + EXPAND_SIZE + 4 + CLASS_ICON_SIZE + 6 -- where the name starts
 
 local GREEN = { 0.25, 1, 0.25 }
@@ -26,6 +28,9 @@ local RED = { 1, 0.3, 0.3 }
 local GREY = { 0.5, 0.5, 0.5 }
 local WHITE = { 1, 1, 1 }
 local GOLD = { 1, 0.82, 0 }
+
+-- A Vanilla item icon (always in the client), its border cropped to fit a small button.
+Rows.NOTE_ICON = { file = "Interface\\Icons\\INV_Misc_Note_01", coords = { 0.08, 0.92, 0.08, 0.92 } }
 
 local function SetColor(fontString, color)
 	fontString:SetTextColor(color[1], color[2], color[3])
@@ -87,6 +92,11 @@ local function ShowPlayerTooltip(row, item)
 	if player.last then
 		GameTooltip:AddDoubleLine(L.TT_LAST, Util.FormatDate(player.last, true), GOLD[1], GOLD[2], GOLD[3], 1, 1, 1)
 	end
+	if ListModel.HasNote(player) then
+		GameTooltip:AddLine(" ")
+		GameTooltip:AddLine(L.COL_NOTE, GOLD[1], GOLD[2], GOLD[3])
+		GameTooltip:AddLine(player.note, 1, 1, 1, true)
+	end
 	GameTooltip:AddLine(" ")
 	GameTooltip:AddLine(L.TT_HINT, 0.6, 0.6, 0.6)
 	GameTooltip:Show()
@@ -106,6 +116,23 @@ local function ShowFightTooltip(row, data)
 	local how = encounter.how and rawget(L, "HOW_" .. encounter.how)
 	if how then
 		GameTooltip:AddLine(how, 0.6, 0.6, 0.6, true)
+	end
+	GameTooltip:Show()
+end
+
+-- The note of a player, or how to write one, over the note button.
+local function ShowNoteTooltip(button)
+	local data = button:GetParent().data
+	if not data or data.kind ~= "player" then
+		return
+	end
+	GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
+	if ListModel.HasNote(data.player) then
+		GameTooltip:AddLine(L.COL_NOTE, GOLD[1], GOLD[2], GOLD[3])
+		GameTooltip:AddLine(data.player.note, 1, 1, 1, true)
+		GameTooltip:AddLine(L.NOTE_EDIT_HINT, 0.6, 0.6, 0.6, true)
+	else
+		GameTooltip:AddLine(L.NOTE_ADD_HINT, 1, 1, 1, true)
 	end
 	GameTooltip:Show()
 end
@@ -157,6 +184,30 @@ local function OnLeave()
 	GameTooltip:Hide()
 end
 
+local function OnNoteClick(button)
+	local row = button:GetParent()
+	local data, view = row.data, row.view
+	if data and data.kind == "player" and view then
+		view.OnEditNote(data.key)
+	end
+end
+
+-- A button of its own, so a click on it opens the note instead of the player's fights.
+local function CreateNoteButton(row)
+	local button = CreateFrame("Button", nil, row)
+	button:SetSize(NOTE_SIZE, NOTE_SIZE)
+	button:SetPoint("CENTER", row.cells.note, "CENTER")
+	button:RegisterForClicks("LeftButtonUp")
+	button.Icon = button:CreateTexture(nil, "ARTWORK")
+	button.Icon:SetAllPoints()
+	Rows.ApplyIcon(button.Icon, Rows.NOTE_ICON)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnClick", OnNoteClick)
+	button:SetScript("OnEnter", ShowNoteTooltip)
+	button:SetScript("OnLeave", OnLeave)
+	return button
+end
+
 -- Creates the widgets of a row frame, once.
 function Rows.Setup(row)
 	if row.cells then
@@ -192,6 +243,8 @@ function Rows.Setup(row)
 	row.FactionIcon = row:CreateTexture(nil, "OVERLAY")
 	row.FactionIcon:SetSize(FACTION_BADGE_SIZE, FACTION_BADGE_SIZE)
 	row.FactionIcon:SetPoint("BOTTOMRIGHT", row.RaceIcon, "BOTTOMRIGHT", 6, -2)
+
+	row.NoteButton = CreateNoteButton(row)
 
 	row.detail = MakeCells(row, ns.Columns.DETAIL, "GameFontHighlightSmall")
 
@@ -279,6 +332,12 @@ local function FillPlayer(row, data, view)
 	SetColor(cells.deaths, data.deaths > 0 and RED or GREY)
 	cells.first:SetText(Util.FormatDate(data.first))
 	SetColor(cells.first, WHITE)
+	cells.note:SetText("")
+
+	-- Lit when there is a note, faded when there is none.
+	local hasNote = ListModel.HasNote(player)
+	row.NoteButton.Icon:SetDesaturated(not hasNote)
+	row.NoteButton.Icon:SetAlpha(hasNote and 1 or NOTE_DIM_ALPHA)
 end
 
 local function FillHeader(row, view)
@@ -317,6 +376,7 @@ function Rows.Init(row, data, view)
 	ShowCells(row.detail, kind == "fight" or kind == "header")
 	row.Expand:SetShown(kind == "player")
 	row.ClassIcon:SetShown(kind == "player")
+	row.NoteButton:SetShown(kind == "player")
 	row.ResultIcon:SetShown(kind == "fight")
 	row.Extra:SetShown(kind == "extra")
 	if kind ~= "player" then

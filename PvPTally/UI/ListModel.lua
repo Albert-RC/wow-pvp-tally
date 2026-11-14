@@ -43,6 +43,11 @@ function ListModel.Matches(item, filter)
 	return false
 end
 
+-- Whether a player record has a note of the user (Store keeps only non-empty ones).
+function ListModel.HasNote(player)
+	return type(player) == "table" and type(player.note) == "string" and player.note ~= ""
+end
+
 local SORT_VALUES = {
 	name = function(item) return item.name:lower() end,
 	race = function(item) return (item.player.race or "~"):lower() end,
@@ -51,6 +56,7 @@ local SORT_VALUES = {
 	kills = function(item) return item.kills end,
 	deaths = function(item) return item.deaths end,
 	first = function(item) return item.first or 0 end,
+	note = function(item) return ListModel.HasNote(item.player) and 1 or 0 end,
 }
 
 function ListModel.SortValue(item, sortKey)

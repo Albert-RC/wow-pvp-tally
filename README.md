@@ -5,6 +5,7 @@ Addon para **World of Warcraft: Forever** que registra cada kill y cada muerte e
 - Una fila por jugador enemigo con el que te has enfrentado: icono de clase, raza (con insignia de bando para los Cielonato, que pueden ser Alianza u Horda), nivel, hermandad, **Kills**, **Deaths** y fecha del primer encuentro.
 - Al hacer clic en una fila se despliega cada enfrentamiento: resultado, fecha y hora local, zona y subzona, nivel del rival y tu nivel.
 - Se puede ordenar por cualquier columna, buscar por nombre, hermandad o zona, borrar un jugador con clic derecho y redimensionar la ventana (dentro de unos límites).
+- **Notas:** cada jugador tiene un icono de nota en la última columna, apagado si no tiene nota y encendido si la tiene. Al hacer clic se abre una ventana de Blizzard para escribirla (una línea de hasta 200 caracteres; guardarla vacía la borra). La nota sale en el tooltip de la fila y en el tooltip del juego cuando pasas el ratón por ese jugador en el mundo o por su retrato. Ordenar por la columna pone primero a los que tienen nota.
 - **Calavera en las placas de nombre:** los jugadores que ya están en tu lista llevan una calavera a la izquierda del nombre en su placa, sean enemigos o no, en el mundo y en los campos de batalla. Solo se ve en las placas que muestra el juego (hay que tener activadas las de enemigos y aliados). Se puede desactivar o cambiar de tamaño en Opciones.
 - **Calavera en el retrato:** como alternativa por si otro addon sustituye las placas de nombre (y con ellas la calavera), el retrato de tu objetivo y de tu foco se cubre con una calavera cuando ese jugador está en tu lista. Se puede desactivar en Opciones.
 - Interfaz con las plantillas de Blizzard: `ButtonFrameTemplate`, cabeceras de la lista de Quién, `ScrollBox`.
@@ -31,7 +32,7 @@ Copia (o enlaza) la carpeta `PvPTally/` en `World of Warcraft\_forever_\Interfac
 | `/tally minimap` | Muestra u oculta el botón del minimapa |
 | `/tally reset` | Borra todos los datos de este personaje |
 | `/tally debug` | Muestra por qué se contó o no la última kill o muerte |
-| `/tally test` | Añade jugadores de prueba (Test Reg y todas las razas en hombre y mujer) |
+| `/tally test` | Añade jugadores de prueba (Test Reg, con una nota, y todas las razas en hombre y mujer) |
 | `/tally test clear` | Borra los jugadores de prueba (también los de `/tally skull`) |
 | `/tally skull Nombre Apellido` | Añade ese jugador a la lista como jugador de prueba (con una kill inventada aquí y ahora) para ver la calavera en su placa sin pelear. Sin nombre, usa el jugador que tengas en el objetivo, aliado o enemigo. Un jugador que ya está en la lista no se toca |
 
@@ -71,8 +72,9 @@ PvPTally/
     MinimapButton.lua      botón del minimapa
     NameplateMarks.lua     calavera en las placas de los jugadores de la lista
     PortraitMarks.lua      calavera sobre el retrato del objetivo y el foco
+    TooltipNotes.lua       la nota del jugador en el tooltip del juego
     SettingsPanel.lua      panel en Opciones > AddOns (API Settings de Blizzard)
-  Commands.lua             comandos /tally y popups de confirmación
+  Commands.lua             comandos /tally y popups (confirmaciones y nota)
   Init.lua                 arranque: crea los objetos y los conecta
 ```
 
@@ -119,7 +121,8 @@ luajit tests/run.lua
   - el arranque con y sin Spy y la migración de datos antiguos;
   - una kill de principio a fin;
   - la calavera de las placas: al aparecer, tras un `/reload`, con una kill nueva, en campos de batalla y con la opción;
-  - la ventana: listar, desplegar, ordenar, buscar y redimensionar.
+  - la ventana: listar, desplegar, ordenar, buscar y redimensionar;
+  - las notas: el botón de cada fila, la ventana para escribirlas y el tooltip del juego.
 
 Lint:
 

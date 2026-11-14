@@ -27,7 +27,7 @@ local SOUND_OPEN = SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_OPEN or 839
 local SOUND_CLOSE = SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_CLOSE or 840
 
 local frame
-local app        -- { store, settings, races, ConfirmDelete(key), OpenSettings() }
+local app        -- { store, settings, races, ConfirmDelete(key), EditNote(key), OpenSettings() }
 local view = {   -- what the rows read (see Rows.lua)
 	layout = Columns.Layout(Columns.LIST_WIDTH),
 	expanded = {},
@@ -297,7 +297,7 @@ end
 
 -- Public --------------------------------------------------------------------------------------------------
 
--- context: { store, settings, races, ConfirmDelete(key), OpenSettings() }
+-- context: { store, settings, races, ConfirmDelete(key), EditNote(key), OpenSettings() }
 function Window.Init(context)
 	app = context
 	view.races = context.races
@@ -308,6 +308,10 @@ function Window.Init(context)
 	end
 	view.OnDelete = function(key)
 		context.ConfirmDelete(key)
+	end
+	view.OnEditNote = function(key)
+		PlaySound(SOUND_CLICK)
+		context.EditNote(key)
 	end
 end
 

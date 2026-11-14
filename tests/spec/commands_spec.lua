@@ -58,6 +58,87 @@ describe("Commands", function()
 		T.isNil(app.store:Get("Kane-Mochivich"))
 	end)
 
+	describe("note popup", function()
+		local dialog
+		before_each(function()
+			dialog = env.StaticPopupDialogs.PVPTALLY_EDIT_NOTE
+			app.store:AddEncounter("Kane-Mochivich", { t = 1, r = ns.Store.KILL }, nil, { silent = true })
+		end)
+
+		it("is a Blizzard popup with an edit box as long as a note", function()
+			T.truthy(dialog.hasEditBox)
+			T.eq({ dialog.button1, dialog.button2 }, { "Accept", "Cancel" }, "Blizzard's own words")
+			T.eq(dialog.maxLetters, ns.Store.NOTE_MAX_LENGTH)
+			T.truthy(dialog.hideOnEscape)
+		end)
+
+		it("opens with the player's name and their note, ready to change", function()
+			app.store:SetNote("Kane-Mochivich", "Rogue")
+			ns.Commands.EditNote("Kane-Mochivich")
+			local shown = env.__popups[1]
+			T.eq(shown[1], "PVPTALLY_EDIT_NOTE")
+			T.contains(shown[2], "Note about ")
+			T.contains(shown[2], "Kane Mochivich")
+			T.eq(shown[4], "Kane-Mochivich")
+			T.eq(env.__popup.EditBox:GetText(), "Rogue")
+		end)
+
+		it("opens empty for a player without a note", function()
+			ns.Commands.EditNote("Kane-Mochivich")
+			T.eq(env.__popup.EditBox:GetText(), "")
+		end)
+
+		it("does not open for a player that is not in the list", function()
+			ns.Commands.EditNote("Nobody-Here")
+			T.eq(env.__popups, {})
+		end)
+
+		it("saves with the button", function()
+			ns.Commands.EditNote("Kane-Mochivich")
+			local popup = env.__popup
+			popup.EditBox:SetText("  Camps the flight master ")
+			dialog.OnAccept(popup, popup.data)
+			T.eq(app.store:Get("Kane-Mochivich").note, "Camps the flight master")
+		end)
+
+		it("saves with Enter and closes", function()
+			ns.Commands.EditNote("Kane-Mochivich")
+			local popup = env.__popup
+			popup.EditBox:SetText("Healer")
+			dialog.EditBoxOnEnterPressed(popup.EditBox, popup.data)
+			T.eq(app.store:Get("Kane-Mochivich").note, "Healer")
+			T.isNil(env.__popup)
+		end)
+
+		it("deletes the note when saved empty", function()
+			app.store:SetNote("Kane-Mochivich", "Rogue")
+			ns.Commands.EditNote("Kane-Mochivich")
+			local popup = env.__popup
+			popup.EditBox:SetText("")
+			dialog.OnAccept(popup, popup.data)
+			T.isNil(app.store:Get("Kane-Mochivich").note)
+		end)
+
+		it("closes with Escape without saving", function()
+			app.store:SetNote("Kane-Mochivich", "Rogue")
+			ns.Commands.EditNote("Kane-Mochivich")
+			env.__popup.EditBox:SetText("changed")
+			dialog.EditBoxOnEscapePressed(env.__popup.EditBox, env.__popup.data)
+			T.isNil(env.__popup)
+			T.eq(app.store:Get("Kane-Mochivich").note, "Rogue")
+		end)
+
+		it("finds the edit box on older clients too (a field, no method)", function()
+			ns.Commands.EditNote("Kane-Mochivich")
+			local popup = env.__popup
+			popup.GetEditBox = nil
+			popup.editBox = popup.EditBox
+			popup.editBox:SetText("Old client")
+			dialog.OnAccept(popup, popup.data)
+			T.eq(app.store:Get("Kane-Mochivich").note, "Old client")
+		end)
+	end)
+
 	it("passes the name after skull as typed, keeping its case", function()
 		T.truthy(ns.Commands.Handle("skull Kane Mochivich"))
 		T.truthy(ns.Commands.Handle("  SKULL   Cabo-Trancas  "))

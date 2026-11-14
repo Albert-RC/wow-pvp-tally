@@ -546,6 +546,124 @@ describe("Addon", function()
 			ns.App.ClearTestData()
 			T.eq(env.PvPTallyFrame.ScrollBox.__count, 0)
 		end)
+
+		describe("notes", function()
+			local function firstRow()
+				return env.PvPTallyFrame.ScrollBox.__pool[1]
+			end
+
+			it("shows a faded note button on players without a note", function()
+				local row = firstRow()
+				local button = row.NoteButton
+				T.truthy(button:IsShown())
+				T.truthy(button.Icon.__desaturated)
+				T.truthy(button.Icon:GetAlpha() < 1)
+				T.eq(button.Icon.__file, ns.Rows.NOTE_ICON.file)
+			end)
+
+			it("lights the button up when the player has a note", function()
+				ns.App.store:SetNote(firstRow().data.key, "Camps the flight master")
+				local icon = firstRow().NoteButton.Icon
+				T.falsy(icon.__desaturated)
+				T.eq(icon:GetAlpha(), 1)
+			end)
+
+			it("opens the note box with a click on the button, not the player's fights", function()
+				local row = firstRow()
+				local key = row.data.key
+				row.NoteButton:RunScript("OnClick", "LeftButton")
+				T.eq(env.__popups[1][1], "PVPTALLY_EDIT_NOTE")
+				T.eq(env.__popups[1][4], key)
+				T.eq(firstRow().data.kind, "player")
+				T.eq(env.PvPTallyFrame.ScrollBox.__pool[2].data.kind, "player", "the row did not open")
+
+				env.__popup.EditBox:SetText("Healer")
+				env.StaticPopupDialogs.PVPTALLY_EDIT_NOTE.OnAccept(env.__popup, env.__popup.data)
+				T.eq(ns.App.store:Get(key).note, "Healer")
+				T.falsy(firstRow().NoteButton.Icon.__desaturated, "the list refreshed")
+			end)
+
+			it("shows the note, or how to add one, over the button", function()
+				local row = firstRow()
+				row.NoteButton:RunScript("OnEnter")
+				T.contains(env.GameTooltip.__lines[1], "Click to write a note")
+
+				ns.App.store:SetNote(row.data.key, "Healer")
+				row = firstRow()
+				row.NoteButton:RunScript("OnEnter")
+				T.eq(env.GameTooltip.__lines[1], "Note")
+				T.eq(env.GameTooltip.__lines[2], "Healer")
+				T.contains(env.GameTooltip.__lines[3], "Click to edit")
+			end)
+
+			it("shows the note in the player's tooltip", function()
+				local row = firstRow()
+				row:RunScript("OnEnter")
+				T.falsy(table.concat(env.GameTooltip.__lines, "\n"):find("Note", 1, true))
+
+				ns.App.store:SetNote(row.data.key, "Healer")
+				firstRow():RunScript("OnEnter")
+				local text = table.concat(env.GameTooltip.__lines, "\n")
+				T.contains(text, "Note\nHealer")
+			end)
+
+			it("hides the note button on fight rows", function()
+				env.PvPTallyFrame.ExpandButton:RunScript("OnClick")
+				for index = 1, env.PvPTallyFrame.ScrollBox.__count do
+					local row = env.PvPTallyFrame.ScrollBox.__pool[index]
+					T.eq(row.NoteButton:IsShown(), row.data.kind == "player", row.data.kind)
+				end
+			end)
+		end)
+	end)
+
+	describe("notes on the game's tooltips", function()
+		local function Start(people, extra)
+			local globals = {
+				PvPTallyCharDB = { version = 3, players = {
+					["Kane-Mochivich"] = { name = "Kane", note = "Camps the flight master", encounters = { { t = 5, r = "K" } } },
+					["Ally-Nobody"] = { name = "Ally", encounters = { { t = 5, r = "D" } } },
+				} },
+				UnitExists = function(unit) return people[unit] ~= nil end,
+				UnitIsPlayer = function(unit) return people[unit] ~= nil end,
+				UnitName = function(unit) return people[unit].name, people[unit].realm end,
+			}
+			for key, value in pairs(extra or {}) do globals[key] = value end
+			return Addon.Start({ globals = globals })
+		end
+
+		it("adds the note of a player in the list to their tooltip", function()
+			local _, env = Start({ mouseover = { name = "Kane", realm = "Mochivich" } })
+			local lines = env.__showUnitTooltip("mouseover")
+			T.eq(#lines, 2)
+			T.contains(lines[2], "PvP Tally note: ")
+			T.contains(lines[2], "Camps the flight master")
+		end)
+
+		it("adds nothing for players without a note or not in the list", function()
+			local _, env = Start({
+				mouseover = { name = "Ally", realm = "Nobody" },
+				target = { name = "Someone", realm = "Else" },
+			})
+			T.eq(#env.__showUnitTooltip("mouseover"), 1)
+			T.eq(#env.__showUnitTooltip("target"), 1)
+			T.eq(#env.__showUnitTooltip(nil), 1)
+		end)
+
+		it("shows a note as soon as it is written", function()
+			local ns, env = Start({ mouseover = { name = "Ally", realm = "Nobody" } })
+			ns.App.store:SetNote("Ally-Nobody", "Healer")
+			T.contains(env.__showUnitTooltip("mouseover")[2], "Healer")
+		end)
+
+		it("keeps an error for /tally debug instead of breaking the tooltip", function()
+			local people = { mouseover = { name = "Kane", realm = "Mochivich" } }
+			local ns, env = Start(people)
+			env.GameTooltip.Show = function() error("boom") end
+			env.__showUnitTooltip("mouseover")
+			T.contains(ns.Util.lastError, "TooltipNotes")
+			T.contains(ns.Util.lastError, "boom")
+		end)
 	end)
 
 	describe("window size", function()
@@ -555,7 +673,7 @@ describe("Addon", function()
 			ns.App.Toggle()
 			env.__flushLayout()
 			local frame = env.PvPTallyFrame
-			T.eq(#frame.Headers, 7)
+			T.eq(#frame.Headers, 8)
 			T.truthy(frame.Headers[1]:GetWidth() > 220, "the columns use the extra width")
 		end)
 	end)

@@ -1,13 +1,14 @@
 -- PvP Tally: the record of every enemy player and every fight, per character
 -- (PvPTallyCharDB). The only module that writes that data.
 --
--- Saved layout (schema 2):
---   version = 2
+-- Saved layout (schema 3):
+--   version = 3
 --   imports = { spy = <epoch of the first import> }
 --   players[key] = {
 --     name, class, race, raceFile, sex, guild, faction, level, lastZone,  -- last known
 --     first, last,                    -- epoch of the first and last fight
 --     extraKills, extraDeaths,        -- fights counted without details
+--     note,                           -- the user's own note: one line, never empty
 --     test,                           -- made up by /tally test
 --     encounters = {                  -- oldest first
 --       { t, r = "K" | "D", zone, subZone, mapID, x, y, oppLevel, myLevel, how },
@@ -16,6 +17,7 @@
 -- key is "First-Surname", the key Spy uses too.
 
 local _, ns = ...
+local Util = ns.Util
 
 local Store = {}
 Store.__index = Store
@@ -23,9 +25,10 @@ ns.Store = Store
 
 Store.KILL = "K"
 Store.DEATH = "D"
-Store.SCHEMA_VERSION = 2
+Store.SCHEMA_VERSION = 3
 Store.MAX_ENCOUNTERS = 250   -- per player; older fights are folded into the extra counts
 Store.SAME_FIGHT_WINDOW = 10 -- seconds: two records of one result this close are one fight
+Store.NOTE_MAX_LENGTH = 200  -- characters, not bytes: the popup counts letters too
 
 local INFO_STRINGS = { "class", "race", "raceFile", "guild", "faction", "lastZone" }
 
@@ -41,6 +44,8 @@ local MIGRATIONS = {
 			data.spyImported = nil
 		end
 	end,
+	-- 2 -> 3: players may have a note. Nothing to convert; Migrate cleans it like any field.
+	[2] = function() end,
 }
 
 -- Brings saved data up to the current schema and drops whatever is malformed, so the
@@ -68,12 +73,38 @@ function Store.Migrate(data)
 			if type(player.encounters) ~= "table" then player.encounters = {} end
 			player.extraKills = tonumber(player.extraKills) or 0
 			player.extraDeaths = tonumber(player.extraDeaths) or 0
+			player.note = Store.CleanNote(player.note)
 		end
 	end
 	return data
 end
 
 -- Player records (static helpers) ---------------------------------------------------------
+
+-- The first `count` characters of a UTF-8 text (a cut by bytes could split a letter).
+local function FirstCharacters(text, count)
+	local position, characters = 1, 0
+	while position <= #text do
+		characters = characters + 1
+		if characters > count then
+			return text:sub(1, position - 1)
+		end
+		-- A lead byte takes its continuation bytes along; any other byte stands alone.
+		local _, last = text:find("^[\192-\255][\128-\191]*", position)
+		position = (last or position) + 1
+	end
+	return text
+end
+
+-- A note as it is kept: one line, trimmed, at most NOTE_MAX_LENGTH characters. nil for
+-- anything else, an empty text included, so "has a note" is just `player.note ~= nil`.
+function Store.CleanNote(text)
+	if type(text) ~= "string" then
+		return nil
+	end
+	text = Util.Trim(FirstCharacters(Util.Trim((text:gsub("%c+", " "))), Store.NOTE_MAX_LENGTH))
+	return text ~= "" and text or nil
+end
 
 -- Copies what is known about an enemy (class, race, guild, level...) onto his record.
 -- Missing or empty values never erase known ones.
@@ -217,6 +248,24 @@ function Store:EnsureTotals(key, kills, deaths)
 	local changed = extraKills ~= player.extraKills or extraDeaths ~= player.extraDeaths
 	player.extraKills, player.extraDeaths = extraKills, extraDeaths
 	return changed
+end
+
+-- Writes, changes or (with an empty text) removes the note of a player in the list.
+-- options.silent skips the event. Returns whether something changed.
+function Store:SetNote(key, text, options)
+	local player = self.data.players[key]
+	if not player then
+		return false
+	end
+	local note = Store.CleanNote(text)
+	if note == player.note then
+		return false
+	end
+	player.note = note
+	if not (options and options.silent) then
+		self:Changed()
+	end
+	return true
 end
 
 function Store:Delete(key)

@@ -68,6 +68,7 @@ UI\Window.lua
 UI\MinimapButton.lua
 UI\NameplateMarks.lua
 UI\PortraitMarks.lua
+UI\TooltipNotes.lua
 UI\SettingsPanel.lua
 
 Commands.lua

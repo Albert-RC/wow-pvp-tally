@@ -32,9 +32,35 @@ describe("Store", function()
 
 		it("upgrades schema 1: the Spy flag moves under imports", function()
 			local data = Store.Migrate({ version = 1, spyImported = 1234, players = {} })
-			T.eq(data.version, 2)
+			T.eq(data.version, 3)
 			T.isNil(data.spyImported)
 			T.eq(data.imports.spy, 1234)
+		end)
+
+		it("upgrades schema 2: players keep everything and may now have a note", function()
+			local kane = { name = "Kane", class = "WARLOCK", encounters = { { t = 5, r = "K" } }, extraKills = 1, extraDeaths = 0 }
+			local data = Store.Migrate({ version = 2, imports = { spy = 9 }, players = { Kane = kane } })
+			T.eq(data.version, 3)
+			T.truthy(data.players.Kane == kane)
+			T.eq(kane.class, "WARLOCK")
+			T.eq(#kane.encounters, 1)
+			T.isNil(kane.note)
+			T.eq(data.imports.spy, 9)
+		end)
+
+		it("cleans saved notes: text kept, anything else dropped", function()
+			local data = Store.Migrate({ version = 3, players = {
+				good = { encounters = {}, note = "  Ganks at the dock  " },
+				lines = { encounters = {}, note = "Rogue\nalways\r\nstealthed" },
+				empty = { encounters = {}, note = "   " },
+				number = { encounters = {}, note = 42 },
+				table = { encounters = {}, note = {} },
+			} })
+			T.eq(data.players.good.note, "Ganks at the dock")
+			T.eq(data.players.lines.note, "Rogue always stealthed")
+			T.isNil(data.players.empty.note)
+			T.isNil(data.players.number.note)
+			T.isNil(data.players.table.note)
 		end)
 
 		it("treats data without a version as schema 1", function()
@@ -156,6 +182,67 @@ describe("Store", function()
 			T.truthy(Store.HasEncounterNear(player, Store.KILL, 1004))
 			T.falsy(Store.HasEncounterNear(player, Store.DEATH, 1004))
 			T.falsy(Store.HasEncounterNear(player, Store.KILL, 1000 + Store.SAME_FIGHT_WINDOW + 1))
+		end)
+	end)
+
+	describe("notes", function()
+		it("writes, changes and removes the note of a player in the list", function()
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			T.truthy(store:SetNote("Kane", "  Camps the flight master  "))
+			T.eq(store:Get("Kane").note, "Camps the flight master")
+			T.eq(fired, { "DATA_CHANGED" })
+
+			T.truthy(store:SetNote("Kane", "Rogue"))
+			T.eq(store:Get("Kane").note, "Rogue")
+
+			T.truthy(store:SetNote("Kane", "   "), "an empty text removes it")
+			T.isNil(store:Get("Kane").note)
+			T.truthy(store:SetNote("Kane", "x"))
+			T.truthy(store:SetNote("Kane", nil))
+			T.isNil(store:Get("Kane").note)
+		end)
+
+		it("says nothing changed when the note is the same", function()
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			store:SetNote("Kane", "Rogue")
+			fired = {}
+			T.falsy(store:SetNote("Kane", " Rogue "))
+			T.falsy(store:SetNote("Ally", ""))
+			T.eq(fired, {})
+		end)
+
+		it("stays quiet when silent", function()
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			T.truthy(store:SetNote("Kane", "Rogue", { silent = true }))
+			T.eq(store:Get("Kane").note, "Rogue")
+			T.eq(fired, {})
+		end)
+
+		it("ignores players that are not in the list", function()
+			T.falsy(store:SetNote("Nobody", "hello"))
+			T.isNil(store:Get("Nobody"))
+		end)
+
+		it("keeps one line", function()
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			store:SetNote("Kane", "first\nsecond\tthird")
+			T.eq(store:Get("Kane").note, "first second third")
+		end)
+
+		it("cuts long notes by letters, never in the middle of one", function()
+			local long = string.rep("ñ", Store.NOTE_MAX_LENGTH + 20) -- two bytes each
+			local note = Store.CleanNote(long)
+			T.eq(note, string.rep("ñ", Store.NOTE_MAX_LENGTH))
+			T.eq(Store.CleanNote(string.rep("a", Store.NOTE_MAX_LENGTH)), string.rep("a", Store.NOTE_MAX_LENGTH))
+			T.eq(Store.CleanNote("a" .. string.rep(" ", Store.NOTE_MAX_LENGTH) .. "b"), "a", "no trailing space after the cut")
+		end)
+
+		it("goes with the player", function()
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			store:SetNote("Kane", "Rogue")
+			store:Delete("Kane")
+			store:AddEncounter("Kane", kill(2), nil, { silent = true })
+			T.isNil(store:Get("Kane").note)
 		end)
 	end)
 

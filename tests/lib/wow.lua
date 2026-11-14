@@ -7,6 +7,9 @@
 --   env.__runTimers()        runs the C_Timer.After callbacks queued so far
 --   env.__chat               chat lines printed
 --   env.__popups             StaticPopup_Show calls
+--   env.__popup              the popup shown last (nil once hidden), with its EditBox
+--   env.__showUnitTooltip(unit)  the game fills GameTooltip for a unit: runs the unit
+--                            tooltip post calls (TooltipDataProcessor)
 --   env.__written            globals the addon set (name -> true)
 --   env.__clock              what GetTime() returns (change it to move time)
 --   env.__showNamePlate(unit) / env.__hideNamePlate(unit)   nameplates on screen
@@ -124,6 +127,17 @@ function Frame:IsEnabled() return self.__enabled ~= false end
 
 function Frame:SetText(text) self.__text = text end
 function Frame:GetText() return self.__text end
+
+function Frame:GetParent() return self.__parent end
+function Frame:SetAlpha(alpha) self.__alpha = alpha end
+function Frame:GetAlpha() return self.__alpha or 1 end
+function Frame:SetDesaturated(desaturated) self.__desaturated = desaturated and true or false end
+
+-- Tooltips: SetOwner starts over, the lines are kept as text (a double line as "left: right").
+function Frame:SetOwner(owner) self.__owner, self.__lines = owner, {} end
+function Frame:ClearLines() self.__lines = {} end
+function Frame:AddLine(text) self.__lines = self.__lines or {}; self.__lines[#self.__lines + 1] = text end
+function Frame:AddDoubleLine(left, right) self:AddLine(tostring(left) .. ": " .. tostring(right)) end
 
 -- Like the client, a new size is reported later: OnSizeChanged fires when something
 -- reads the size (GetWidth / GetHeight) or the layout is flushed (env.__flushLayout),
@@ -277,7 +291,21 @@ function Wow.NewEnv(options)
 	env.GetLocale = function() return options.locale or "enUS" end
 	env.DEFAULT_CHAT_FRAME = { AddMessage = function(_, message) env.__chat[#env.__chat + 1] = message end }
 	env.StaticPopupDialogs = {}
-	env.StaticPopup_Show = function(...) env.__popups[#env.__popups + 1] = { ... } end
+	env.StaticPopup_Show = function(...)
+		env.__popups[#env.__popups + 1] = { ... }
+		local popup = NewFrame("Frame", nil, env)
+		popup.which, popup.data = (...), select(4, ...)
+		popup.EditBox = NewFrame("EditBox", nil, env)
+		popup.EditBox.__parent = popup
+		popup.GetEditBox = function(self) return self.EditBox end
+		env.__popup = popup
+		return popup
+	end
+	env.StaticPopup_Hide = function(which)
+		if env.__popup and env.__popup.which == which then
+			env.__popup = nil
+		end
+	end
 	env.SlashCmdList = {}
 	env.UISpecialFrames = {}
 	env.UIParent = NewFrame("Frame", "UIParent", env)
@@ -292,6 +320,28 @@ function Wow.NewEnv(options)
 	end
 	env.Minimap = NewFrame("Frame", "Minimap", env)
 	env.GameTooltip = NewFrame("GameTooltip", "GameTooltip", env)
+	env.GameTooltip.GetUnit = function(self) return nil, self.__unit end
+
+	-- Unit tooltips on a modern client: post calls run after the game fills one.
+	env.Enum = { TooltipDataType = { Unit = 2 } }
+	env.__tooltipPostCalls = {}
+	env.TooltipDataProcessor = {
+		AddTooltipPostCall = function(dataType, callback)
+			env.__tooltipPostCalls[#env.__tooltipPostCalls + 1] = { dataType = dataType, callback = callback }
+		end,
+	}
+	function env.__showUnitTooltip(unit)
+		local tooltip = env.GameTooltip
+		tooltip:SetOwner(env.UIParent)
+		tooltip.__unit = unit
+		tooltip:AddLine("Blizzard's own lines")
+		for _, postCall in ipairs(env.__tooltipPostCalls) do
+			if postCall.dataType == env.Enum.TooltipDataType.Unit then
+				postCall.callback(tooltip, { type = postCall.dataType })
+			end
+		end
+		return tooltip.__lines
+	end
 	env.PlaySound = function() end
 	env.tinsert = table.insert
 	env.wipe = function(t) for key in pairs(t) do t[key] = nil end return t end
@@ -309,6 +359,7 @@ function Wow.NewEnv(options)
 	}
 
 	env.YES, env.NO, env.LEVEL, env.UNKNOWNOBJECT = "Yes", "No", "Level", "Unknown"
+	env.ACCEPT, env.CANCEL = "Accept", "Cancel"
 	env.FACTION_ALLIANCE, env.FACTION_HORDE = "Alliance", "Horde"
 	env.RAID_CLASS_COLORS = {
 		ROGUE = { r = 1, g = 0.96, b = 0.41 },
