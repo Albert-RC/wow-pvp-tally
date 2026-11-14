@@ -59,6 +59,7 @@ Todos son atlas públicos: un addon puede usarlos con `texture:SetAtlas(nombre)`
 | `WowStyle1DropdownTemplate` + `dropdown:SetupMenu(fn)` con `rootDescription:CreateRadio(...)` | ✅ (74 usos en addons de Forever) |
 | `CreateMaskTexture` / `AddMaskTexture` | ✅ (más de 200 usos) |
 | API `Settings` (`RegisterCanvasLayoutCategory`, `RegisterAddOnCategory`, `OpenToCategory(category:GetID())`) | ✅ (Syndicator y Leatrix_Plus la usan) |
+| Caja de texto de varias líneas: `InsetFrameTemplate` > `ScrollFrameTemplate` > `EditBox` con `SetMultiLine(true)` como hijo del scroll (`SetScrollChild`) | ✅ (así la hace ForeverCore en `UI/Report.lua`; ForeverMail y ForeverDungeonJournal también usan `SetMultiLine`). La caja de `StaticPopupDialogs` (`hasEditBox`) es de una sola línea |
 
 Otras texturas clásicas que siguen existiendo y otros addons de Forever usan: `Interface\DialogFrame\UI-DialogBox-Border` / `-Background` / `-Header`, `Interface\Tooltips\UI-Tooltip-Border`, `Interface\FrameGeneral\UI-Background-Rock`, `Interface\PaperDollInfoFrame\UI-Character-Skills-Bar` / `-BarBorder`.
 

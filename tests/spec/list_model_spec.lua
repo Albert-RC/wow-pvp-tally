@@ -76,6 +76,36 @@ describe("ListModel", function()
 	end)
 
 	describe("notes", function()
+		local LIMIT = { lines = 3, characters = 20 }
+
+		it("splits a note into its lines", function()
+			T.eq(ListModel.NoteLines("Rogue\nHealer", LIMIT), { "Rogue", "Healer" })
+			T.eq(ListModel.NoteLines("One line", LIMIT), { "One line" })
+		end)
+
+		it("keeps blank lines as a space, so the tooltip does not drop them", function()
+			T.eq(ListModel.NoteLines("Rogue\n\nHealer", LIMIT), { "Rogue", " ", "Healer" })
+		end)
+
+		it("cuts after the last line shown, with ...", function()
+			T.eq(ListModel.NoteLines("1\n2\n3\n4\n5", LIMIT), { "1", "2", "3..." })
+		end)
+
+		it("cuts after the last character shown, with ...", function()
+			T.eq(ListModel.NoteLines("Camps the flight master all day", LIMIT), { "Camps the flight mas..." })
+			T.eq(ListModel.NoteLines("ñññññññññññññññññññññññ", LIMIT), { "ññññññññññññññññññññ..." }, "letters, not bytes")
+		end)
+
+		it("gives nil for no note", function()
+			T.isNil(ListModel.NoteLines(nil, LIMIT))
+			T.isNil(ListModel.NoteLines("", LIMIT))
+		end)
+
+		it("shows less in the game's tooltip than in the list", function()
+			T.truthy(ListModel.NOTE_PREVIEW_UNIT.lines < ListModel.NOTE_PREVIEW_LIST.lines)
+			T.truthy(ListModel.NOTE_PREVIEW_UNIT.characters < ListModel.NOTE_PREVIEW_LIST.characters)
+		end)
+
 		it("tells which players have a note", function()
 			T.truthy(ListModel.HasNote({ note = "Healer" }))
 			T.falsy(ListModel.HasNote({ note = "" }))

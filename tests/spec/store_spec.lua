@@ -51,13 +51,13 @@ describe("Store", function()
 		it("cleans saved notes: text kept, anything else dropped", function()
 			local data = Store.Migrate({ version = 3, players = {
 				good = { encounters = {}, note = "  Ganks at the dock  " },
-				lines = { encounters = {}, note = "Rogue\nalways\r\nstealthed" },
+				lines = { encounters = {}, note = "Rogue\nalways\r\nstealthed\tat night" },
 				empty = { encounters = {}, note = "   " },
 				number = { encounters = {}, note = 42 },
 				table = { encounters = {}, note = {} },
 			} })
 			T.eq(data.players.good.note, "Ganks at the dock")
-			T.eq(data.players.lines.note, "Rogue always stealthed")
+			T.eq(data.players.lines.note, "Rogue\nalways\nstealthed at night")
 			T.isNil(data.players.empty.note)
 			T.isNil(data.players.number.note)
 			T.isNil(data.players.table.note)
@@ -223,10 +223,16 @@ describe("Store", function()
 			T.isNil(store:Get("Nobody"))
 		end)
 
-		it("keeps one line", function()
+		it("keeps the line breaks, one blank line in a row at most", function()
 			store:AddEncounter("Kane", kill(1), nil, { silent = true })
-			store:SetNote("Kane", "first\nsecond\tthird")
-			T.eq(store:Get("Kane").note, "first second third")
+			store:SetNote("Kane", "\n\nfirst  \r\nsecond\rthird\n\n\n\nfourth\tfifth\n\n")
+			T.eq(store:Get("Kane").note, "first\nsecond\nthird\n\nfourth fifth")
+		end)
+
+		it("takes long notes, up to the limit", function()
+			T.truthy(Store.NOTE_MAX_LENGTH >= 1000)
+			local long = string.rep("line\n", 150)
+			T.eq(#Store.CleanNote(long), #long - 1)
 		end)
 
 		it("cuts long notes by letters, never in the middle of one", function()

@@ -128,6 +128,24 @@ function Frame:IsEnabled() return self.__enabled ~= false end
 function Frame:SetText(text) self.__text = text end
 function Frame:GetText() return self.__text end
 
+-- Edit boxes: the letter count is in characters, as in the client; one box has the focus.
+function Frame:SetMultiLine(multiLine) self.__multiLine = multiLine and true or false end
+function Frame:IsMultiLine() return self.__multiLine == true end
+function Frame:SetMaxLetters(count) self.__maxLetters = count end
+function Frame:GetMaxLetters() return self.__maxLetters or 0 end
+function Frame:GetNumLetters()
+	local text = self.__text or ""
+	return #(text:gsub("[\128-\191]", ""))
+end
+function Frame:SetFocus() if self.__env then self.__env.__focus = self end end
+function Frame:ClearFocus() if self.__env and self.__env.__focus == self then self.__env.__focus = nil end end
+function Frame:HasFocus() return self.__env ~= nil and self.__env.__focus == self end
+
+-- Scroll frames.
+function Frame:SetScrollChild(child) self.__scrollChild = child end
+function Frame:SetVerticalScroll(offset) self.__verticalScroll = offset end
+function Frame:GetVerticalScroll() return self.__verticalScroll or 0 end
+
 function Frame:GetParent() return self.__parent end
 function Frame:SetAlpha(alpha) self.__alpha = alpha end
 function Frame:GetAlpha() return self.__alpha or 1 end
@@ -346,6 +364,7 @@ function Wow.NewEnv(options)
 	env.tinsert = table.insert
 	env.wipe = function(t) for key in pairs(t) do t[key] = nil end return t end
 	env.GetCursorPosition = function() return 0, 0 end
+	env.IsShiftKeyDown = function() return env.__shift == true end -- set env.__shift in a test
 	env.CreateDataProvider = function(rows) return rows end
 	env.CreateScrollBoxListLinearView = function()
 		local view = Magic()

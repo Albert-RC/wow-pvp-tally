@@ -36,61 +36,9 @@ StaticPopupDialogs.PVPTALLY_RESET = {
 	preferredIndex = 3,
 }
 
--- The edit box of a popup: a method on recent clients, a field on older ones.
-local function PopupEditBox(popup)
-	if type(popup) ~= "table" then
-		return nil
-	end
-	if type(popup.GetEditBox) == "function" then
-		return popup:GetEditBox()
-	end
-	return popup.editBox or popup.EditBox
-end
-
--- data is the player key. Enter saves, Escape cancels; saving an empty text removes the note.
-StaticPopupDialogs.PVPTALLY_EDIT_NOTE = {
-	text = "%s",
-	button1 = ACCEPT,
-	button2 = CANCEL,
-	hasEditBox = true,
-	maxLetters = ns.Store.NOTE_MAX_LENGTH,
-	editBoxWidth = 320,
-	OnAccept = function(popup, key)
-		local editBox = PopupEditBox(popup)
-		if editBox then
-			app.store:SetNote(key, editBox:GetText())
-		end
-	end,
-	EditBoxOnEnterPressed = function(editBox, key)
-		app.store:SetNote(key, editBox:GetText())
-		StaticPopup_Hide("PVPTALLY_EDIT_NOTE")
-	end,
-	EditBoxOnEscapePressed = function()
-		StaticPopup_Hide("PVPTALLY_EDIT_NOTE")
-	end,
-	timeout = 0,
-	whileDead = true,
-	hideOnEscape = true,
-	preferredIndex = 3,
-}
-
 function Commands.ConfirmDelete(key)
 	local player = app.store:Get(key)
 	StaticPopup_Show("PVPTALLY_DELETE_PLAYER", L.DELETE_CONFIRM:format(Util.ColoredName(key, player and player.class)), nil, key)
-end
-
--- The popup empties its edit box when it shows, so the current note goes in afterwards.
-function Commands.EditNote(key)
-	local player = app.store:Get(key)
-	if not player then
-		return
-	end
-	local popup = StaticPopup_Show("PVPTALLY_EDIT_NOTE", L.NOTE_EDIT:format(Util.ColoredName(key, player.class)), nil, key)
-	local editBox = PopupEditBox(popup)
-	if editBox then
-		editBox:SetText(player.note or "")
-		editBox:HighlightText()
-	end
 end
 
 function Commands.ConfirmReset()

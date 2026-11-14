@@ -49,9 +49,16 @@ function App.ConfirmDelete(key)
 	ns.Commands.ConfirmDelete(key)
 end
 
--- Opens the box to write the note of a player in the list.
+-- Opens the box to write the note of a player in the list, beside the main window.
 function App.EditNote(key)
-	ns.Commands.EditNote(key)
+	return ns.NoteEditor.Open(key, ns.Window.Frame())
+end
+
+-- Deletes the note of a player, and closes it if it was open (saving it would bring it
+-- back). Returns whether there was a note.
+function App.DeleteNote(key)
+	ns.NoteEditor.Close(key)
+	return App.store:SetNote(key, nil)
 end
 
 -- The chat notification checkboxes of the options panel. kind: "kills" or "deaths".
@@ -163,6 +170,7 @@ local function OnAddonLoaded()
 	App.races = ns.Races.NewResolver(ns.WowApi.RaceInfo, ns.WowApi.AtlasExists, CLASS_ICON_TCOORDS)
 
 	ns.Window.Init(App)
+	ns.NoteEditor.Init(App)
 	ns.SettingsPanel.Register(App)
 	ns.Commands.Register(App)
 	ns.Notifications.Attach(ns.bus, App.settings)

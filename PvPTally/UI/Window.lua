@@ -27,7 +27,7 @@ local SOUND_OPEN = SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_OPEN or 839
 local SOUND_CLOSE = SOUNDKIT and SOUNDKIT.IG_CHARACTER_INFO_CLOSE or 840
 
 local frame
-local app        -- { store, settings, races, ConfirmDelete(key), EditNote(key), OpenSettings() }
+local app        -- { store, settings, races, ConfirmDelete(key), EditNote(key), DeleteNote(key), OpenSettings() }
 local view = {   -- what the rows read (see Rows.lua)
 	layout = Columns.Layout(Columns.LIST_WIDTH),
 	expanded = {},
@@ -297,7 +297,7 @@ end
 
 -- Public --------------------------------------------------------------------------------------------------
 
--- context: { store, settings, races, ConfirmDelete(key), EditNote(key), OpenSettings() }
+-- context: { store, settings, races, ConfirmDelete(key), EditNote(key), DeleteNote(key), OpenSettings() }
 function Window.Init(context)
 	app = context
 	view.races = context.races
@@ -312,6 +312,11 @@ function Window.Init(context)
 	view.OnEditNote = function(key)
 		PlaySound(SOUND_CLICK)
 		context.EditNote(key)
+	end
+	view.OnDeleteNote = function(key)
+		if context.DeleteNote(key) then
+			PlaySound(SOUND_CLICK)
+		end
 	end
 end
 
@@ -346,4 +351,9 @@ end
 
 function Window.IsShown()
 	return frame ~= nil and frame:IsShown()
+end
+
+-- The window frame, once made: panels that open beside it (the note) anchor to it.
+function Window.Frame()
+	return frame
 end

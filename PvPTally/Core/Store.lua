@@ -8,7 +8,7 @@
 --     name, class, race, raceFile, sex, guild, faction, level, lastZone,  -- last known
 --     first, last,                    -- epoch of the first and last fight
 --     extraKills, extraDeaths,        -- fights counted without details
---     note,                           -- the user's own note: one line, never empty
+--     note,                           -- the user's own note: text with line breaks, never empty
 --     test,                           -- made up by /tally test
 --     encounters = {                  -- oldest first
 --       { t, r = "K" | "D", zone, subZone, mapID, x, y, oppLevel, myLevel, how },
@@ -28,7 +28,7 @@ Store.DEATH = "D"
 Store.SCHEMA_VERSION = 3
 Store.MAX_ENCOUNTERS = 250   -- per player; older fights are folded into the extra counts
 Store.SAME_FIGHT_WINDOW = 10 -- seconds: two records of one result this close are one fight
-Store.NOTE_MAX_LENGTH = 200  -- characters, not bytes: the popup counts letters too
+Store.NOTE_MAX_LENGTH = 1000 -- characters, not bytes: the edit box counts letters too
 
 local INFO_STRINGS = { "class", "race", "raceFile", "guild", "faction", "lastZone" }
 
@@ -81,28 +81,16 @@ end
 
 -- Player records (static helpers) ---------------------------------------------------------
 
--- The first `count` characters of a UTF-8 text (a cut by bytes could split a letter).
-local function FirstCharacters(text, count)
-	local position, characters = 1, 0
-	while position <= #text do
-		characters = characters + 1
-		if characters > count then
-			return text:sub(1, position - 1)
-		end
-		-- A lead byte takes its continuation bytes along; any other byte stands alone.
-		local _, last = text:find("^[\192-\255][\128-\191]*", position)
-		position = (last or position) + 1
-	end
-	return text
-end
-
--- A note as it is kept: one line, trimmed, at most NOTE_MAX_LENGTH characters. nil for
--- anything else, an empty text included, so "has a note" is just `player.note ~= nil`.
+-- A note as it is kept: trimmed, at most NOTE_MAX_LENGTH characters, line breaks as "\n"
+-- with at most one blank line in a row, no other control characters. nil for anything
+-- else, an empty text included, so "has a note" is just `player.note ~= nil`.
 function Store.CleanNote(text)
 	if type(text) ~= "string" then
 		return nil
 	end
-	text = Util.Trim(FirstCharacters(Util.Trim((text:gsub("%c+", " "))), Store.NOTE_MAX_LENGTH))
+	text = text:gsub("\r\n?", "\n"):gsub("[%z\1-\9\11-\31\127]", " ")
+	text = text:gsub("[ ]+\n", "\n"):gsub("\n\n\n+", "\n\n")
+	text = Util.Trim((Util.FirstCharacters(Util.Trim(text), Store.NOTE_MAX_LENGTH)))
 	return text ~= "" and text or nil
 end
 

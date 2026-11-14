@@ -25,25 +25,33 @@ describe("TooltipNotes", function()
 		return frame
 	end
 
-	it("writes the note of a player, the note in white", function()
-		local line = Notes.LineFor({ note = "Rogue" })
-		T.contains(line, "PvP Tally note: ")
-		T.contains(line, "|cffffffffRogue|r")
+	it("writes a gold title and the note in white, line by line", function()
+		local lines = Notes.LinesFor({ note = "Rogue\nAlways in stealth" })
+		T.eq(lines, {
+			{ text = "PvP Tally note:", color = { 1, 0.82, 0 } },
+			{ text = "Rogue", color = { 1, 1, 1 } },
+			{ text = "Always in stealth", color = { 1, 1, 1 } },
+		})
 	end)
 
-	it("has no line for players without a note or out of the list", function()
-		T.isNil(Notes.LineFor({}))
-		T.isNil(Notes.LineFor({ note = "" }))
-		T.isNil(Notes.LineFor(nil))
+	it("shows only the beginning of a long note", function()
+		local long = "1\n2\n3\n4\n5\n6"
+		local lines = Notes.LinesFor({ note = long })
+		T.eq(#lines, 1 + ns.ListModel.NOTE_PREVIEW_UNIT.lines)
+		T.eq(lines[#lines].text, "4...")
+	end)
+
+	it("has no lines for players without a note or out of the list", function()
+		T.isNil(Notes.LinesFor({}))
+		T.isNil(Notes.LinesFor({ note = "" }))
+		T.isNil(Notes.LinesFor(nil))
 	end)
 
 	it("adds the line at the end of the tooltip of a player with a note", function()
 		local frame = tooltip()
 		frame:AddLine("Kane Mochivich")
 		T.truthy(notes:Decorate(frame, "mouseover"))
-		T.eq(#frame.__lines, 2)
-		T.eq(frame.__lines[1], "Kane Mochivich", "Blizzard's lines are left alone")
-		T.contains(frame.__lines[2], "Camps the flight master")
+		T.eq(frame.__lines, { "Kane Mochivich", "PvP Tally note:", "Camps the flight master" }, "Blizzard's lines are left alone")
 	end)
 
 	it("adds nothing for anyone else", function()
@@ -60,7 +68,7 @@ describe("TooltipNotes", function()
 		players["Ally-Nobody"].note = "Healer"
 		local frame = tooltip()
 		T.truthy(notes:Decorate(frame, "target"))
-		T.contains(frame.__lines[1], "Healer")
+		T.eq(frame.__lines[2], "Healer")
 	end)
 
 	it("needs its collaborators", function()

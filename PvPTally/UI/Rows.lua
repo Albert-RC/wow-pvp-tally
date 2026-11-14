@@ -5,7 +5,7 @@
 --   layout    the Columns.Layout in use
 --   expanded  { [key] = true } for players shown open
 --   races     the icon resolver (race, faction and class icons)
---   OnToggle(key), OnDelete(key), OnEditNote(key)
+--   OnToggle(key), OnDelete(key), OnEditNote(key), OnDeleteNote(key)
 
 local _, ns = ...
 local L, Util, ListModel = ns.L, ns.Util, ns.ListModel
@@ -64,6 +64,14 @@ function Rows.ClassName(class, sex)
 	return name
 end
 
+-- "Note" and the note, line by line (a long one cut, see ListModel.NoteLines).
+local function AddNoteLines(note)
+	GameTooltip:AddLine(L.COL_NOTE, GOLD[1], GOLD[2], GOLD[3])
+	for _, line in ipairs(ListModel.NoteLines(note, ListModel.NOTE_PREVIEW_LIST) or {}) do
+		GameTooltip:AddLine(line, 1, 1, 1, true)
+	end
+end
+
 local function ShowPlayerTooltip(row, item)
 	local player = item.player
 	GameTooltip:SetOwner(row, "ANCHOR_RIGHT")
@@ -94,8 +102,7 @@ local function ShowPlayerTooltip(row, item)
 	end
 	if ListModel.HasNote(player) then
 		GameTooltip:AddLine(" ")
-		GameTooltip:AddLine(L.COL_NOTE, GOLD[1], GOLD[2], GOLD[3])
-		GameTooltip:AddLine(player.note, 1, 1, 1, true)
+		AddNoteLines(player.note)
 	end
 	GameTooltip:AddLine(" ")
 	GameTooltip:AddLine(L.TT_HINT, 0.6, 0.6, 0.6)
@@ -128,8 +135,7 @@ local function ShowNoteTooltip(button)
 	end
 	GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
 	if ListModel.HasNote(data.player) then
-		GameTooltip:AddLine(L.COL_NOTE, GOLD[1], GOLD[2], GOLD[3])
-		GameTooltip:AddLine(data.player.note, 1, 1, 1, true)
+		AddNoteLines(data.player.note)
 		GameTooltip:AddLine(L.NOTE_EDIT_HINT, 0.6, 0.6, 0.6, true)
 	else
 		GameTooltip:AddLine(L.NOTE_ADD_HINT, 1, 1, 1, true)
@@ -184,12 +190,21 @@ local function OnLeave()
 	GameTooltip:Hide()
 end
 
-local function OnNoteClick(button)
+-- Click: write the note. Shift + right-click: delete it (Shift, so a stray right-click
+-- meant for the row never takes a note away). A plain right-click does nothing.
+local function OnNoteClick(button, mouseButton)
 	local row = button:GetParent()
 	local data, view = row.data, row.view
-	if data and data.kind == "player" and view then
-		view.OnEditNote(data.key)
+	if not (data and data.kind == "player" and view) then
+		return
 	end
+	if mouseButton == "RightButton" then
+		if IsShiftKeyDown() then
+			view.OnDeleteNote(data.key)
+		end
+		return
+	end
+	view.OnEditNote(data.key)
 end
 
 -- A button of its own, so a click on it opens the note instead of the player's fights.
@@ -197,7 +212,7 @@ local function CreateNoteButton(row)
 	local button = CreateFrame("Button", nil, row)
 	button:SetSize(NOTE_SIZE, NOTE_SIZE)
 	button:SetPoint("CENTER", row.cells.note, "CENTER")
-	button:RegisterForClicks("LeftButtonUp")
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	button.Icon = button:CreateTexture(nil, "ARTWORK")
 	button.Icon:SetAllPoints()
 	Rows.ApplyIcon(button.Icon, Rows.NOTE_ICON)

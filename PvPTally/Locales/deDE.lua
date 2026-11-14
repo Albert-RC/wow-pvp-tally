@@ -61,10 +61,12 @@ L.DELETE_CONFIRM = "%s und alle Kämpfe gegen diesen Spieler aus PvP Tally lösc
 L.RESET_CONFIRM = "ALLE Kämpfe löschen, die PvP Tally für diesen Charakter aufgezeichnet hat?"
 L.RESET_DONE = "Alle Daten dieses Charakters wurden gelöscht."
 
-L.NOTE_EDIT = "Notiz zu %s:"
 L.NOTE_ADD_HINT = "Klicken, um eine Notiz zu diesem Spieler zu schreiben."
-L.NOTE_EDIT_HINT = "Klicken, um die Notiz zu bearbeiten. Leer speichern, um sie zu löschen."
-L.TOOLTIP_NOTE = "PvP-Tally-Notiz: %s"
+L.NOTE_EDIT_HINT = "Klicken: Notiz bearbeiten. Umschalt + Rechtsklick: löschen."
+L.TOOLTIP_NOTE = "PvP-Tally-Notiz:"
+L.NOTE_SAVE = "Speichern"
+L.NOTE_PLACEHOLDER = "Schreib auf, was du dir über diesen Spieler merken willst: wie er kämpft, wo er lauert, mit wem er unterwegs ist..."
+L.NOTE_COUNT = "%d / %d"
 
 L.SETTINGS_BUTTON = "Optionen"
 L.SETTINGS_CHAT_HEADER = "Chat"
