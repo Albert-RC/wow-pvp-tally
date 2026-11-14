@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.5.0 (2026-11-14)
+
+- Write your own notes on any player in your list. A new Note column has an icon for each player: faded when there is no note, lit up when there is one.
+- Click the icon to open the note beside the window: a box of several lines (up to 1000 characters) with a letter count, and Save and Cancel buttons. Escape cancels.
+- Shift + right-click on the icon deletes the note. A plain right-click does nothing, so a stray click never takes a note away.
+- The note shows in the player's tooltip in the list and, in short, in the game's tooltip when you mouse over that player in the world or over their portrait.
+- Click the Note column header to put the players with a note first.
+- The window is 44 pixels wider at its smallest, to make room for the new column.
+- Your saved data is upgraded automatically; nothing is lost.
+
 ## v1.4.0 (2026-11-13)
 
 - Players already in your list now have a skull left of their name on their nameplate, friend or foe, in the open world and in battlegrounds. Turn on enemy and friendly nameplates in the game options to see it.
