@@ -43,6 +43,43 @@ function ListModel.Matches(item, filter)
 	return false
 end
 
+-- Whether a player record has a note of the user (Store keeps only non-empty ones).
+function ListModel.HasNote(player)
+	return type(player) == "table" and type(player.note) == "string" and player.note ~= ""
+end
+
+-- How much of a note the tooltips show: the list's in full but for very long notes; the
+-- game's tooltip of a player only a glimpse, so it stays small in the middle of a fight.
+ListModel.NOTE_PREVIEW_LIST = { lines = 15, characters = 600 }
+ListModel.NOTE_PREVIEW_UNIT = { lines = 4, characters = 200 }
+
+-- The lines of a note for a tooltip, cut to `limit` ({ lines, characters }); "..." ends
+-- the last one when something was left out. Blank lines are " " (an empty line would be
+-- dropped). nil when there is no note.
+function ListModel.NoteLines(note, limit)
+	if type(note) ~= "string" or note == "" then
+		return nil
+	end
+	local text, cut = Util.FirstCharacters(note, limit.characters)
+	local lines = {}
+	for line in (text .. "\n"):gmatch("(.-)\n") do
+		if #lines == limit.lines then
+			cut = true
+			break
+		end
+		lines[#lines + 1] = line
+	end
+	if cut then
+		lines[#lines] = Util.Trim(lines[#lines]) .. "..."
+	end
+	for index, line in ipairs(lines) do
+		if Util.Trim(line) == "" then
+			lines[index] = " "
+		end
+	end
+	return lines
+end
+
 local SORT_VALUES = {
 	name = function(item) return item.name:lower() end,
 	race = function(item) return (item.player.race or "~"):lower() end,
@@ -51,6 +88,7 @@ local SORT_VALUES = {
 	kills = function(item) return item.kills end,
 	deaths = function(item) return item.deaths end,
 	first = function(item) return item.first or 0 end,
+	note = function(item) return ListModel.HasNote(item.player) and 1 or 0 end,
 }
 
 function ListModel.SortValue(item, sortKey)

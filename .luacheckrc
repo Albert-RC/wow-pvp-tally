@@ -5,7 +5,7 @@ max_line_length = false
 codes = true
 
 -- docs/archive holds shelved code for reference; the game never loads it.
-exclude_files = { ".luacheckrc", "docs/archive/**" }
+exclude_files = { ".luacheckrc", "docs/archive/**", ".claude/**" }
 
 -- The addon -------------------------------------------------------------------------------
 
@@ -28,11 +28,12 @@ files["PvPTally"] = {
 		"issecretvalue", "issecrettable",
 		-- Frames and UI
 		"CreateFrame", "UIParent", "Minimap", "GameTooltip", "UISpecialFrames", "DEFAULT_CHAT_FRAME",
-		"StaticPopup_Show", "PlaySound", "SOUNDKIT", "GetCursorPosition", "Settings", "InCombatLockdown",
+		"StaticPopup_Show", "PlaySound", "SOUNDKIT", "GetCursorPosition", "IsShiftKeyDown", "Settings", "InCombatLockdown",
 		"CreateDataProvider", "CreateScrollBoxListLinearView", "ScrollUtil", "TargetFrame", "FocusFrame",
+		"TooltipDataProcessor", "Enum",
 		-- Constants and tables
 		"RAID_CLASS_COLORS", "CLASS_ICON_TCOORDS", "LOCALIZED_CLASS_NAMES_MALE", "LOCALIZED_CLASS_NAMES_FEMALE",
-		"LEVEL", "YES", "NO", "UNKNOWNOBJECT", "FACTION_ALLIANCE", "FACTION_HORDE",
+		"LEVEL", "YES", "NO", "CANCEL", "UNKNOWNOBJECT", "FACTION_ALLIANCE", "FACTION_HORDE",
 		-- Game state
 		"GetLocale", "GetTime", "GetZoneText", "GetSubZoneText", "IsInInstance", "GetGuildInfo",
 		"GetPlayerInfoByGUID", "GetNumGroupMembers", "IsInRaid", "UnitClass", "UnitExists", "UnitFactionGroup", "UnitGUID", "UnitIsEnemy",

@@ -181,6 +181,39 @@ function WowApi.VisibleNamePlateUnits()
 	return units
 end
 
+-- Tooltips ---------------------------------------------------------------------------------------------
+
+-- The unit token a tooltip describes ("mouseover", "target"...), or nil.
+function WowApi.TooltipUnit(tooltip)
+	if type(tooltip) ~= "table" or type(tooltip.GetUnit) ~= "function" then
+		return nil
+	end
+	local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
+	unit = ok and R(unit) or nil
+	return type(unit) == "string" and unit ~= "" and unit or nil
+end
+
+-- Calls callback(tooltip, unit) each time the game fills the tooltip of a unit: the mouse
+-- over someone in the world or over a unit frame. unit is what TooltipUnit reads (may be
+-- nil). Modern clients announce it through TooltipDataProcessor; older ones through the
+-- OnTooltipSetUnit script. Returns whether it could hook either.
+function WowApi.HookUnitTooltip(callback)
+	local function OnUnit(tooltip)
+		callback(tooltip, WowApi.TooltipUnit(tooltip))
+	end
+	local processor = TooltipDataProcessor
+	local unitType = Enum and Enum.TooltipDataType and Enum.TooltipDataType.Unit
+	if type(processor) == "table" and type(processor.AddTooltipPostCall) == "function" and unitType ~= nil then
+		if pcall(processor.AddTooltipPostCall, unitType, OnUnit) then
+			return true
+		end
+	end
+	if type(GameTooltip) == "table" and type(GameTooltip.HookScript) == "function" then
+		return (pcall(GameTooltip.HookScript, GameTooltip, "OnTooltipSetUnit", OnUnit))
+	end
+	return false
+end
+
 -- Where we are --------------------------------------------------------------------------------------
 
 -- The open world: not a battleground, arena, dungeon or raid.

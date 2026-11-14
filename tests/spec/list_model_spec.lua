@@ -63,6 +63,55 @@ describe("ListModel", function()
 			T.truthy(ListModel.DefaultAscending("race"))
 			T.falsy(ListModel.DefaultAscending("kills"))
 			T.falsy(ListModel.DefaultAscending("first"))
+			T.falsy(ListModel.DefaultAscending("note"))
+		end)
+
+		it("puts the players with a note first, then by name", function()
+			store:SetNote("Cris-Tres", "Healer")
+			local rows = ListModel.Build(store, { sortKey = "note", ascending = false })
+			T.eq(keys(rows), { "Cris-Tres", "Ana-Uno", "Bea-Dos" })
+			rows = ListModel.Build(store, { sortKey = "note", ascending = true })
+			T.eq(keys(rows)[3], "Cris-Tres")
+		end)
+	end)
+
+	describe("notes", function()
+		local LIMIT = { lines = 3, characters = 20 }
+
+		it("splits a note into its lines", function()
+			T.eq(ListModel.NoteLines("Rogue\nHealer", LIMIT), { "Rogue", "Healer" })
+			T.eq(ListModel.NoteLines("One line", LIMIT), { "One line" })
+		end)
+
+		it("keeps blank lines as a space, so the tooltip does not drop them", function()
+			T.eq(ListModel.NoteLines("Rogue\n\nHealer", LIMIT), { "Rogue", " ", "Healer" })
+		end)
+
+		it("cuts after the last line shown, with ...", function()
+			T.eq(ListModel.NoteLines("1\n2\n3\n4\n5", LIMIT), { "1", "2", "3..." })
+		end)
+
+		it("cuts after the last character shown, with ...", function()
+			T.eq(ListModel.NoteLines("Camps the flight master all day", LIMIT), { "Camps the flight mas..." })
+			T.eq(ListModel.NoteLines("ñññññññññññññññññññññññ", LIMIT), { "ññññññññññññññññññññ..." }, "letters, not bytes")
+		end)
+
+		it("gives nil for no note", function()
+			T.isNil(ListModel.NoteLines(nil, LIMIT))
+			T.isNil(ListModel.NoteLines("", LIMIT))
+		end)
+
+		it("shows less in the game's tooltip than in the list", function()
+			T.truthy(ListModel.NOTE_PREVIEW_UNIT.lines < ListModel.NOTE_PREVIEW_LIST.lines)
+			T.truthy(ListModel.NOTE_PREVIEW_UNIT.characters < ListModel.NOTE_PREVIEW_LIST.characters)
+		end)
+
+		it("tells which players have a note", function()
+			T.truthy(ListModel.HasNote({ note = "Healer" }))
+			T.falsy(ListModel.HasNote({ note = "" }))
+			T.falsy(ListModel.HasNote({ note = 3 }))
+			T.falsy(ListModel.HasNote({}))
+			T.falsy(ListModel.HasNote(nil))
 		end)
 	end)
 

@@ -546,6 +546,271 @@ describe("Addon", function()
 			ns.App.ClearTestData()
 			T.eq(env.PvPTallyFrame.ScrollBox.__count, 0)
 		end)
+
+		describe("notes", function()
+			local function firstRow()
+				return env.PvPTallyFrame.ScrollBox.__pool[1]
+			end
+
+			it("shows a faded note button on players without a note", function()
+				local row = firstRow()
+				local button = row.NoteButton
+				T.truthy(button:IsShown())
+				T.truthy(button.Icon.__desaturated)
+				T.truthy(button.Icon:GetAlpha() < 1)
+				T.eq(button.Icon.__file, ns.Rows.NOTE_ICON.file)
+			end)
+
+			it("lights the button up when the player has a note", function()
+				ns.App.store:SetNote(firstRow().data.key, "Camps the flight master")
+				local icon = firstRow().NoteButton.Icon
+				T.falsy(icon.__desaturated)
+				T.eq(icon:GetAlpha(), 1)
+			end)
+
+			describe("note panel", function()
+				local function openNote(row)
+					row = row or firstRow()
+					row.NoteButton:RunScript("OnClick", "LeftButton")
+					return ns.NoteEditor.Frame(), row.data.key
+				end
+
+				it("opens beside the window with a click on the button, not the player's fights", function()
+					local editor, key = openNote()
+					T.truthy(editor:IsShown())
+					T.eq(ns.NoteEditor.OpenKey(), key)
+					T.truthy(editor.__parent == env.PvPTallyFrame, "a child of the window: no global of its own")
+					T.eq(editor.__template, "PortraitFrameTemplate")
+					T.eq(editor.__points[1], { "TOPLEFT", env.PvPTallyFrame, "TOPRIGHT", 2, 0 })
+					T.contains(editor.PlayerName:GetText(), ns.Util.DisplayName(key))
+					T.eq(env.PvPTallyFrame.ScrollBox.__pool[2].data.kind, "player", "the row did not open")
+					T.eq(env.__popups, {}, "no popup any more")
+				end)
+
+				it("is a box of several lines that takes a whole note, ready to write", function()
+					local editor = openNote()
+					local box = editor.EditBox
+					T.truthy(box:IsMultiLine())
+					T.eq(box:GetMaxLetters(), ns.Store.NOTE_MAX_LENGTH)
+					T.truthy(box:HasFocus())
+					T.truthy(editor.Scroll.__scrollChild == box)
+				end)
+
+				it("opens with the note the player has", function()
+					local key = firstRow().data.key
+					ns.App.store:SetNote(key, "Rogue\nAlways in stealth")
+					local editor = openNote()
+					T.eq(editor.EditBox:GetText(), "Rogue\nAlways in stealth")
+					T.falsy(editor.Placeholder:IsShown())
+				end)
+
+				it("saves several lines, closes and lights the button up", function()
+					local editor, key = openNote()
+					editor.EditBox:SetText("Rogue\n\nCamps the flight master  \nRides with a priest")
+					editor.SaveButton:RunScript("OnClick")
+					T.eq(ns.App.store:Get(key).note, "Rogue\n\nCamps the flight master\nRides with a priest")
+					T.falsy(editor:IsShown())
+					T.isNil(ns.NoteEditor.OpenKey())
+					T.falsy(firstRow().NoteButton.Icon.__desaturated, "the list refreshed")
+				end)
+
+				it("deletes the note when saved empty", function()
+					local key = firstRow().data.key
+					ns.App.store:SetNote(key, "Rogue")
+					local editor = openNote()
+					editor.EditBox:SetText("   ")
+					editor.SaveButton:RunScript("OnClick")
+					T.isNil(ns.App.store:Get(key).note)
+				end)
+
+				it("drops the changes with Cancel or Escape", function()
+					local key = firstRow().data.key
+					ns.App.store:SetNote(key, "Rogue")
+					local editor = openNote()
+					editor.EditBox:SetText("changed")
+					editor.CancelButton:RunScript("OnClick")
+					T.falsy(editor:IsShown())
+					openNote()
+					editor.EditBox:SetText("changed again")
+					editor.EditBox:RunScript("OnEscapePressed")
+					T.falsy(editor:IsShown())
+					T.falsy(editor.EditBox:HasFocus(), "the keyboard is free again")
+					T.eq(ns.App.store:Get(key).note, "Rogue")
+				end)
+
+				it("counts the letters and hints what to write while empty", function()
+					local editor = openNote()
+					T.truthy(editor.Placeholder:IsShown())
+					T.eq(editor.Count:GetText(), "0 / " .. ns.Store.NOTE_MAX_LENGTH)
+					editor.EditBox:SetText("Pícaro")
+					editor.EditBox:RunScript("OnTextChanged", true)
+					T.falsy(editor.Placeholder:IsShown())
+					T.eq(editor.Count:GetText(), "6 / " .. ns.Store.NOTE_MAX_LENGTH, "letters, not bytes")
+				end)
+
+				it("switches to another player's note", function()
+					local first = firstRow()
+					local second = env.PvPTallyFrame.ScrollBox.__pool[2]
+					ns.App.store:SetNote(second.data.key, "Healer")
+					local editor = openNote(first)
+					editor.EditBox:SetText("not saved")
+					openNote(env.PvPTallyFrame.ScrollBox.__pool[2])
+					T.eq(ns.NoteEditor.OpenKey(), second.data.key)
+					T.eq(editor.EditBox:GetText(), "Healer")
+					T.isNil(ns.App.store:Get(first.data.key).note)
+				end)
+
+				it("is closed unsaved when its note is deleted", function()
+					local key = firstRow().data.key
+					ns.App.store:SetNote(key, "Rogue")
+					local editor = openNote()
+					editor.EditBox:SetText("Rogue, and more")
+					env.__shift = true
+					firstRow().NoteButton:RunScript("OnClick", "RightButton")
+					T.falsy(editor:IsShown())
+					T.isNil(ns.App.store:Get(key).note)
+				end)
+
+				it("stays open when another player's note is deleted", function()
+					local second = env.PvPTallyFrame.ScrollBox.__pool[2]
+					ns.App.store:SetNote(second.data.key, "Healer")
+					local editor, key = openNote()
+					env.__shift = true
+					env.PvPTallyFrame.ScrollBox.__pool[2].NoteButton:RunScript("OnClick", "RightButton")
+					T.truthy(editor:IsShown())
+					T.eq(ns.NoteEditor.OpenKey(), key)
+				end)
+
+				it("follows the cursor down a long note", function()
+					local editor = openNote()
+					editor.Scroll:SetHeight(200)
+					editor.EditBox:RunScript("OnCursorChanged", 0, -260, 2, 14)
+					T.eq(editor.Scroll:GetVerticalScroll(), 74)
+				end)
+			end)
+
+			describe("Shift + right-click on the button", function()
+				it("deletes the note and fades the button", function()
+					local key = firstRow().data.key
+					ns.App.store:SetNote(key, "Rogue\nAlways in stealth")
+					env.__shift = true
+					firstRow().NoteButton:RunScript("OnClick", "RightButton")
+					T.isNil(ns.App.store:Get(key).note)
+					T.truthy(firstRow().NoteButton.Icon.__desaturated)
+					T.notNil(ns.App.store:Get(key), "the player stays in the list")
+					T.eq(env.__popups, {}, "no question asked")
+				end)
+
+				it("does nothing without Shift: a plain right-click is not enough", function()
+					local key = firstRow().data.key
+					ns.App.store:SetNote(key, "Rogue")
+					env.__shift = false
+					firstRow().NoteButton:RunScript("OnClick", "RightButton")
+					T.eq(ns.App.store:Get(key).note, "Rogue")
+					T.isNil(ns.NoteEditor.OpenKey(), "nor opens the note")
+					T.eq(env.__popups, {}, "nor asks to delete the player")
+				end)
+
+				it("does nothing on a player without a note", function()
+					env.__shift = true
+					firstRow().NoteButton:RunScript("OnClick", "RightButton")
+					T.isNil(ns.App.store:Get(firstRow().data.key).note)
+				end)
+
+				it("still opens the note with Shift + left-click", function()
+					env.__shift = true
+					firstRow().NoteButton:RunScript("OnClick", "LeftButton")
+					T.eq(ns.NoteEditor.OpenKey(), firstRow().data.key)
+				end)
+			end)
+
+			it("shows the note, or how to add one, over the button", function()
+				local row = firstRow()
+				row.NoteButton:RunScript("OnEnter")
+				T.contains(env.GameTooltip.__lines[1], "Click to write a note")
+
+				ns.App.store:SetNote(row.data.key, "Healer")
+				row = firstRow()
+				row.NoteButton:RunScript("OnEnter")
+				T.eq(env.GameTooltip.__lines[1], "Note")
+				T.eq(env.GameTooltip.__lines[2], "Healer")
+				T.contains(env.GameTooltip.__lines[3], "Click: edit the note")
+				T.contains(env.GameTooltip.__lines[3], "Shift + right-click: delete it")
+			end)
+
+			it("shows the note in the player's tooltip", function()
+				local row = firstRow()
+				row:RunScript("OnEnter")
+				T.falsy(table.concat(env.GameTooltip.__lines, "\n"):find("Note", 1, true))
+
+				ns.App.store:SetNote(row.data.key, "Healer")
+				firstRow():RunScript("OnEnter")
+				local text = table.concat(env.GameTooltip.__lines, "\n")
+				T.contains(text, "Note\nHealer")
+			end)
+
+			it("shows a note of several lines line by line", function()
+				local row = firstRow()
+				ns.App.store:SetNote(row.data.key, "Rogue\n\nCamps the flight master")
+				firstRow():RunScript("OnEnter")
+				T.contains(table.concat(env.GameTooltip.__lines, "\n"), "Note\nRogue\n \nCamps the flight master")
+			end)
+
+			it("hides the note button on fight rows", function()
+				env.PvPTallyFrame.ExpandButton:RunScript("OnClick")
+				for index = 1, env.PvPTallyFrame.ScrollBox.__count do
+					local row = env.PvPTallyFrame.ScrollBox.__pool[index]
+					T.eq(row.NoteButton:IsShown(), row.data.kind == "player", row.data.kind)
+				end
+			end)
+		end)
+	end)
+
+	describe("notes on the game's tooltips", function()
+		local function Start(people, extra)
+			local globals = {
+				PvPTallyCharDB = { version = 3, players = {
+					["Kane-Mochivich"] = { name = "Kane", note = "Camps the flight master", encounters = { { t = 5, r = "K" } } },
+					["Ally-Nobody"] = { name = "Ally", encounters = { { t = 5, r = "D" } } },
+				} },
+				UnitExists = function(unit) return people[unit] ~= nil end,
+				UnitIsPlayer = function(unit) return people[unit] ~= nil end,
+				UnitName = function(unit) return people[unit].name, people[unit].realm end,
+			}
+			for key, value in pairs(extra or {}) do globals[key] = value end
+			return Addon.Start({ globals = globals })
+		end
+
+		it("adds the note of a player in the list to their tooltip", function()
+			local _, env = Start({ mouseover = { name = "Kane", realm = "Mochivich" } })
+			local lines = env.__showUnitTooltip("mouseover")
+			T.eq(lines, { "Blizzard's own lines", "PvP Tally note:", "Camps the flight master" })
+		end)
+
+		it("adds nothing for players without a note or not in the list", function()
+			local _, env = Start({
+				mouseover = { name = "Ally", realm = "Nobody" },
+				target = { name = "Someone", realm = "Else" },
+			})
+			T.eq(#env.__showUnitTooltip("mouseover"), 1)
+			T.eq(#env.__showUnitTooltip("target"), 1)
+			T.eq(#env.__showUnitTooltip(nil), 1)
+		end)
+
+		it("shows a note as soon as it is written", function()
+			local ns, env = Start({ mouseover = { name = "Ally", realm = "Nobody" } })
+			ns.App.store:SetNote("Ally-Nobody", "Healer")
+			T.eq(env.__showUnitTooltip("mouseover")[3], "Healer")
+		end)
+
+		it("keeps an error for /tally debug instead of breaking the tooltip", function()
+			local people = { mouseover = { name = "Kane", realm = "Mochivich" } }
+			local ns, env = Start(people)
+			env.GameTooltip.Show = function() error("boom") end
+			env.__showUnitTooltip("mouseover")
+			T.contains(ns.Util.lastError, "TooltipNotes")
+			T.contains(ns.Util.lastError, "boom")
+		end)
 	end)
 
 	describe("window size", function()
@@ -555,7 +820,7 @@ describe("Addon", function()
 			ns.App.Toggle()
 			env.__flushLayout()
 			local frame = env.PvPTallyFrame
-			T.eq(#frame.Headers, 7)
+			T.eq(#frame.Headers, 8)
 			T.truthy(frame.Headers[1]:GetWidth() > 220, "the columns use the extra width")
 		end)
 	end)

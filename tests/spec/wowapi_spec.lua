@@ -223,4 +223,48 @@ describe("WowApi", function()
 		T.eq(Api.MapName(1413), "Los Baldíos")
 		T.isNil(Api.MapName(nil))
 	end)
+
+	describe("unit tooltips", function()
+		it("reads the unit a tooltip describes", function()
+			env.GameTooltip.__unit = "mouseover"
+			T.eq(Api.TooltipUnit(env.GameTooltip), "mouseover")
+		end)
+
+		it("gives nil for no unit, a secret one or a tooltip that fails", function()
+			env.GameTooltip.__unit = nil
+			T.isNil(Api.TooltipUnit(env.GameTooltip))
+			env.GameTooltip.__unit = env.Secret("mouseover")
+			T.isNil(Api.TooltipUnit(env.GameTooltip))
+			T.isNil(Api.TooltipUnit({ GetUnit = function() error("forbidden") end }))
+			T.isNil(Api.TooltipUnit({}))
+			T.isNil(Api.TooltipUnit(nil))
+		end)
+
+		it("hooks the unit tooltips through TooltipDataProcessor on a modern client", function()
+			local seen = {}
+			T.truthy(Api.HookUnitTooltip(function(tooltip, unit) seen[#seen + 1] = { tooltip, unit } end))
+			T.eq(#env.__tooltipPostCalls, 1)
+			T.eq(env.__tooltipPostCalls[1].dataType, env.Enum.TooltipDataType.Unit)
+			env.__showUnitTooltip("mouseover")
+			T.truthy(seen[1][1] == env.GameTooltip)
+			T.eq(seen[1][2], "mouseover")
+		end)
+
+		it("falls back to OnTooltipSetUnit on an older client", function()
+			env.TooltipDataProcessor = nil
+			local seen = {}
+			T.truthy(Api.HookUnitTooltip(function(_, unit) seen[#seen + 1] = unit end))
+			env.GameTooltip.__unit = "target"
+			env.GameTooltip:RunScript("OnTooltipSetUnit")
+			T.eq(seen, { "target" })
+		end)
+
+		it("says so when the client has neither", function()
+			env.TooltipDataProcessor = nil
+			env.GameTooltip.HookScript = function() error("no such script") end
+			T.falsy(Api.HookUnitTooltip(function() end))
+			env.GameTooltip = nil
+			T.falsy(Api.HookUnitTooltip(function() end))
+		end)
+	end)
 end)

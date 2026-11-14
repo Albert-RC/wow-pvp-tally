@@ -14,6 +14,7 @@ L.COL_GUILD = "Гильдия"
 L.COL_KILLS = "Убийства"
 L.COL_DEATHS = "Смерти"
 L.COL_FIRST = "Первый бой"
+L.COL_NOTE = "Заметка"
 
 L.D_RESULT = "Итог"
 L.D_DATE = "Дата"
@@ -59,6 +60,13 @@ L.HOW_test = "Добавлен вручную для проверки (/tally sk
 L.DELETE_CONFIRM = "Удалить %s и все бои с этим игроком из PvP Tally?"
 L.RESET_CONFIRM = "Удалить ВСЕ бои, записанные PvP Tally для этого персонажа?"
 L.RESET_DONE = "Все данные этого персонажа удалены."
+
+L.NOTE_ADD_HINT = "Щелкните, чтобы написать заметку об этом игроке."
+L.NOTE_EDIT_HINT = "Щелчок: изменить заметку. Shift + правый щелчок: удалить."
+L.TOOLTIP_NOTE = "Заметка PvP Tally:"
+L.NOTE_SAVE = "Сохранить"
+L.NOTE_PLACEHOLDER = "Запишите, что хотите помнить об этом игроке: как он сражается, где поджидает, с кем ходит..."
+L.NOTE_COUNT = "%d / %d"
 
 L.SETTINGS_BUTTON = "Настройки"
 L.SETTINGS_CHAT_HEADER = "Чат"

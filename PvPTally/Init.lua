@@ -2,8 +2,8 @@
 -- game. The only file that knows every module.
 --
 --   ADDON_LOADED  saved variables are ready: settings, store, races, UI, options panel, commands
---   PLAYER_LOGIN  the world is ready: tracker, nameplate and portrait skulls, minimap button,
---                 first-run Spy import
+--   PLAYER_LOGIN  the world is ready: tracker, nameplate and portrait skulls, notes on the
+--                 unit tooltips, minimap button, first-run Spy import
 
 local ADDON_NAME, ns = ...
 local L, Util = ns.L, ns.Util
@@ -47,6 +47,18 @@ end
 
 function App.ConfirmDelete(key)
 	ns.Commands.ConfirmDelete(key)
+end
+
+-- Opens the box to write the note of a player in the list, beside the main window.
+function App.EditNote(key)
+	return ns.NoteEditor.Open(key, ns.Window.Frame())
+end
+
+-- Deletes the note of a player, and closes it if it was open (saving it would bring it
+-- back). Returns whether there was a note.
+function App.DeleteNote(key)
+	ns.NoteEditor.Close(key)
+	return App.store:SetNote(key, nil)
 end
 
 -- The chat notification checkboxes of the options panel. kind: "kills" or "deaths".
@@ -158,6 +170,7 @@ local function OnAddonLoaded()
 	App.races = ns.Races.NewResolver(ns.WowApi.RaceInfo, ns.WowApi.AtlasExists, CLASS_ICON_TCOORDS)
 
 	ns.Window.Init(App)
+	ns.NoteEditor.Init(App)
 	ns.SettingsPanel.Register(App)
 	ns.Commands.Register(App)
 	ns.Notifications.Attach(ns.bus, App.settings)
@@ -232,10 +245,23 @@ local function StartPortraitMarks()
 	ns.bus:On(ns.Events.DATA_CHANGED, function() marks:Refresh() end)
 end
 
+-- The note of a player in the list, on the game's tooltip of that player.
+local function StartTooltipNotes()
+	local notes = ns.TooltipNotes.New({
+		playerKey = ns.WowApi.PlayerKey,
+		lookup = function(key) return App.store:Get(key) end,
+	})
+	App.tooltipNotes = notes
+	ns.WowApi.HookUnitTooltip(Util.Guard("TooltipNotes", function(tooltip, unit)
+		notes:Decorate(tooltip, unit)
+	end))
+end
+
 local function OnPlayerLogin()
 	StartTracker()
 	StartNameplateMarks()
 	StartPortraitMarks()
+	StartTooltipNotes()
 	ns.MinimapButton.Create(App)
 	-- First run on this character: bring in what Spy already knows, if Spy is around.
 	if not App.store:IsImported(ns.SpyImport.SOURCE) and ns.SpyImport.IsAvailable() then

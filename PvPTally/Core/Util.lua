@@ -52,6 +52,22 @@ function Util.Trim(text)
 	return (tostring(text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
 end
 
+-- The first `count` characters of a UTF-8 text (a cut by bytes could split a letter),
+-- and whether something was left out.
+function Util.FirstCharacters(text, count)
+	local position, characters = 1, 0
+	while position <= #text do
+		characters = characters + 1
+		if characters > count then
+			return text:sub(1, position - 1), true
+		end
+		-- A lead byte takes its continuation bytes along; any other byte stands alone.
+		local _, last = text:find("^[\192-\255][\128-\191]*", position)
+		position = (last or position) + 1
+	end
+	return text, false
+end
+
 -- Player keys are "First-Surname" (the realm slot holds the surname on Forever), the
 -- same key Spy uses. Shown with a space: "Cabo-Trancas" -> "Cabo Trancas".
 function Util.DisplayName(key)
