@@ -210,6 +210,19 @@ describe("WowApi", function()
 		end)
 	end)
 
+	it("reads the minimap shape that a minimap addon declares, round by default", function()
+		env.GetMinimapShape = nil
+		T.eq(Api.MinimapShape(), "ROUND")
+		env.GetMinimapShape = function() return "SQUARE" end
+		T.eq(Api.MinimapShape(), "SQUARE")
+		env.GetMinimapShape = function() return env.Secret("SQUARE") end
+		T.eq(Api.MinimapShape(), "ROUND", "a secret shape counts as not known")
+		env.GetMinimapShape = function() error("broken") end
+		T.eq(Api.MinimapShape(), "ROUND")
+		env.GetMinimapShape = function() return 42 end
+		T.eq(Api.MinimapShape(), "ROUND")
+	end)
+
 	it("knows when we are in combat", function()
 		T.falsy(Api.InCombat())
 		env.InCombatLockdown = function() return true end

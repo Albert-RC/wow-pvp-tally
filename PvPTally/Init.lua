@@ -262,7 +262,7 @@ local function OnPlayerLogin()
 	StartNameplateMarks()
 	StartPortraitMarks()
 	StartTooltipNotes()
-	ns.MinimapButton.Create(App)
+	ns.MinimapButton.Create(App, ns.WowApi.MinimapShape)
 	-- First run on this character: bring in what Spy already knows, if Spy is around.
 	if not App.store:IsImported(ns.SpyImport.SOURCE) and ns.SpyImport.IsAvailable() then
 		App.ImportFromSpy(true)

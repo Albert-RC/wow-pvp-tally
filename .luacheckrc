@@ -27,7 +27,7 @@ files["PvPTally"] = {
 		-- Secret values (modern client)
 		"issecretvalue", "issecrettable",
 		-- Frames and UI
-		"CreateFrame", "UIParent", "Minimap", "GameTooltip", "UISpecialFrames", "DEFAULT_CHAT_FRAME",
+		"CreateFrame", "UIParent", "Minimap", "GetMinimapShape", "GameTooltip", "UISpecialFrames", "DEFAULT_CHAT_FRAME",
 		"StaticPopup_Show", "PlaySound", "SOUNDKIT", "GetCursorPosition", "IsShiftKeyDown", "Settings", "InCombatLockdown",
 		"CreateDataProvider", "CreateScrollBoxListLinearView", "ScrollUtil", "TargetFrame", "FocusFrame",
 		"TooltipDataProcessor", "Enum",
