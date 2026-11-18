@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.1 (2026-11-18)
+
+- The minimap button now sits on the edge of the minimap, in line with the other addon buttons, instead of slightly inside it.
+- It also follows square minimaps from minimap addons. Addons that gather minimap buttons, such as MinimapButtonButton, still pick it up.
+
 ## v1.5.0 (2026-11-14)
 
 - Write your own notes on any player in your list. A new Note column has an icon for each player: faded when there is no note, lit up when there is one.
