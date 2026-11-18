@@ -126,6 +126,28 @@ describe("Addon", function()
 			T.isNil(ns.App.store:Get("Cabo-Trancas"), "already imported: not imported again")
 		end)
 
+		it("puts the minimap button on the rim of the minimap, where LibDBIcon puts BugSack's", function()
+			local ns, env = Addon.LoadAll()
+			env.Minimap:SetSize(198, 198)
+			env.__fire("ADDON_LOADED", Addon.NAME)
+			env.__fire("PLAYER_LOGIN")
+			local point, relative, relativePoint, x, y = unpack(env.PvPTallyMinimapButton.__points[1])
+			T.eq({ point, relative, relativePoint }, { "CENTER", env.Minimap, "CENTER" })
+			T.near(math.sqrt(x * x + y * y), 99 + ns.MinimapButton.EDGE_OFFSET, 0.001)
+		end)
+
+		it("follows the shape that a minimap addon declares", function()
+			local ns, env = Addon.LoadAll({ globals = { GetMinimapShape = function() return "SQUARE" end } })
+			env.Minimap:SetSize(198, 198)
+			env.__fire("ADDON_LOADED", Addon.NAME)
+			env.__fire("PLAYER_LOGIN")
+			local _, _, _, x, y = unpack(env.PvPTallyMinimapButton.__points[1])
+			local angle = env.PvPTallyDB.minimap.angle
+			local squareX, squareY = ns.MinimapButton.Offset(angle, 198, 198, "SQUARE")
+			T.near(x, squareX, 0.001)
+			T.near(y, squareY, 0.001)
+		end)
+
 		it("records a kill end to end and tells the chat", function()
 			local ns, env = Addon.Start({ globals = {
 				UnitExists = function(unit) return unit == "target" end,

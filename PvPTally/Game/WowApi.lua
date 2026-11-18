@@ -314,3 +314,14 @@ end
 function WowApi.AtlasExists(atlas)
 	return C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil and C_Texture.GetAtlasInfo(atlas) ~= nil
 end
+
+-- The minimap shape ("ROUND", "SQUARE", "CORNER-TOPLEFT"...). The game has no such API:
+-- addons that reshape the minimap define GetMinimapShape, and round is the default.
+function WowApi.MinimapShape()
+	if type(GetMinimapShape) ~= "function" then
+		return "ROUND"
+	end
+	local ok, shape = pcall(GetMinimapShape)
+	shape = ok and R(shape) or nil
+	return type(shape) == "string" and shape or "ROUND"
+end

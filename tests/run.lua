@@ -31,6 +31,7 @@ local SPECS = {
 	"portrait_marks_spec",
 	"tooltip_notes_spec",
 	"note_editor_spec",
+	"minimap_button_spec",
 	"settings_panel_spec",
 	"commands_spec",
 	"locales_spec",
