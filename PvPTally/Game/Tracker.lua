@@ -220,6 +220,7 @@ local function NewEncounter(result, context, info, how)
 		x = context.x,
 		y = context.y,
 		oppLevel = info and type(info.level) == "number" and info.level > 0 and info.level or nil,
+		oppGuild = info and type(info.guild) == "string" and info.guild ~= "" and info.guild or nil,
 		myLevel = context.myLevel,
 		how = how,
 	}

@@ -11,7 +11,7 @@
 ## Notes-ruRU: Ведет счет убийств и смертей в открытом мире, по строке на каждого вражеского игрока.
 ## Notes-zhCN: 记录每一次野外PvP击杀和死亡，每个敌方玩家一行。
 ## Notes-zhTW: 記錄每一次野外PvP擊殺和死亡，每個敵方玩家一行。
-## Version: 1.5.1
+## Version: 1.6.0
 ## Author: Albert-RC
 ## Category: Combat
 ## Category-deDE: Kampf
@@ -25,7 +25,7 @@
 ## Category-zhCN: 战斗
 ## Category-zhTW: 戰鬥
 ## IconTexture: Interface\Icons\INV_Misc_Bone_HumanSkull_01
-## SavedVariables: PvPTallyDB
+## SavedVariables: PvPTallyDB, PvPTallyAccountDB
 ## SavedVariablesPerCharacter: PvPTallyCharDB
 ## AddonCompartmentFunc: PvPTally_OnAddonCompartmentClick
 

@@ -32,7 +32,7 @@ describe("Store", function()
 
 		it("upgrades schema 1: the Spy flag moves under imports", function()
 			local data = Store.Migrate({ version = 1, spyImported = 1234, players = {} })
-			T.eq(data.version, 3)
+			T.eq(data.version, 4)
 			T.isNil(data.spyImported)
 			T.eq(data.imports.spy, 1234)
 		end)
@@ -40,7 +40,7 @@ describe("Store", function()
 		it("upgrades schema 2: players keep everything and may now have a note", function()
 			local kane = { name = "Kane", class = "WARLOCK", encounters = { { t = 5, r = "K" } }, extraKills = 1, extraDeaths = 0 }
 			local data = Store.Migrate({ version = 2, imports = { spy = 9 }, players = { Kane = kane } })
-			T.eq(data.version, 3)
+			T.eq(data.version, 4)
 			T.truthy(data.players.Kane == kane)
 			T.eq(kane.class, "WARLOCK")
 			T.eq(#kane.encounters, 1)
@@ -283,5 +283,259 @@ describe("Store", function()
 		T.falsy(store:IsImported("spy"))
 		store:MarkImported("spy", 123)
 		T.truthy(store:IsImported("spy"))
+	end)
+
+	-- The record of the account (v1.6) ---------------------------------------------------------
+
+	describe("schema 4", function()
+		-- What a character saved up to v1.5 (schema 3).
+		local function schema3()
+			return { version = 3, imports = { spy = 77 }, players = {
+				["Kane-Mochivich"] = { name = "Kane-Mochivich", encounters = { { t = 5, r = "K" }, { t = 9, r = "D" } },
+					extraKills = 2, extraDeaths = 1, note = "Ganks" },
+				["Ana-Uno"] = { name = "Ana-Uno", encounters = {}, extraKills = 0, extraDeaths = 0 },
+			} }
+		end
+
+		it("gives each fight of a character's old record his key, and his counts without details", function()
+			local data = Store.Migrate(schema3(), "Yo-Mismo")
+			T.eq(data.version, 4)
+			local kane = data.players["Kane-Mochivich"]
+			T.eq(kane.encounters[1].me, "Yo-Mismo")
+			T.eq(kane.encounters[2].me, "Yo-Mismo")
+			T.eq(kane.extraByCharacter, { ["Yo-Mismo"] = { kills = 2, deaths = 1 } })
+			T.isNil(data.players["Ana-Uno"].extraByCharacter, "nothing to share out")
+			T.eq(data.imports.spy, 77)
+			T.eq(data.characters, {})
+		end)
+
+		it("upgrades without a character too: the fights just say nobody", function()
+			local data = Store.Migrate(schema3())
+			T.eq(data.version, 4)
+			T.isNil(data.players["Kane-Mochivich"].encounters[1].me)
+			T.isNil(data.players["Kane-Mochivich"].extraByCharacter)
+		end)
+
+		it("repairs malformed characters, shares and note origins", function()
+			local data = Store.Migrate({ version = 4, characters = {
+				["Yo-Mismo"] = { imports = "nope", merged = "yesterday" },
+				[3] = {},
+				broken = "nope",
+			}, players = {
+				a = { encounters = {}, extraByCharacter = { ["Yo-Mismo"] = { kills = "2" }, other = "x", none = { kills = 0 } } },
+				b = { encounters = {}, extraByCharacter = "nope", noteFrom = "Yo-Mismo" },
+				c = { encounters = {}, note = "kept", noteFrom = 5 },
+			} })
+			T.eq(data.characters, { ["Yo-Mismo"] = { imports = {} } })
+			T.eq(data.players.a.extraByCharacter, { ["Yo-Mismo"] = { kills = 2, deaths = 0 } })
+			T.isNil(data.players.b.extraByCharacter)
+			T.isNil(data.players.b.noteFrom, "no note, no origin")
+			T.eq(data.players.c.note, "kept")
+			T.isNil(data.players.c.noteFrom)
+		end)
+
+		it("records new fights for the character playing now", function()
+			store:SetCharacter("Yo-Mismo", { class = "MAGE", raceFile = "Gnome", level = 30 })
+			store:AddEncounter("Kane", kill(1))
+			store:AddEncounter("Kane", kill(2, { me = "Otro-Pj" }))
+			T.eq(store:Get("Kane").encounters[1].me, "Yo-Mismo")
+			T.eq(store:Get("Kane").encounters[2].me, "Otro-Pj", "a fight that says whose it is keeps it")
+			T.eq(store:CurrentCharacter(), "Yo-Mismo")
+			T.eq(store:Character("Yo-Mismo").class, "MAGE")
+			T.eq(store:Character("Yo-Mismo").level, 30)
+		end)
+
+		it("keeps the oppGuild of each fight", function()
+			store:AddEncounter("Kane", kill(1, { oppGuild = "Selecció Natural" }))
+			T.eq(store:Get("Kane").encounters[1].oppGuild, "Selecció Natural")
+		end)
+
+		it("holds up to 500 fights per player; older ones stay counted, still of their character", function()
+			T.eq(Store.MAX_ENCOUNTERS, 500)
+			store:SetCharacter("Yo-Mismo")
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			store:AddEncounter("Kane", death(2), nil, { silent = true })
+			for i = 3, Store.MAX_ENCOUNTERS + 2 do
+				store:AddEncounter("Kane", kill(i, { me = "Otro-Pj" }), nil, { silent = true })
+			end
+			local kane = store:Get("Kane")
+			T.eq(#kane.encounters, Store.MAX_ENCOUNTERS)
+			T.eq({ Store.ExtraFor(kane, "Yo-Mismo") }, { 1, 1 })
+			T.eq({ Store.Counts(kane) }, { Store.MAX_ENCOUNTERS + 1, 1 })
+		end)
+
+		it("matches a near fight of the same character only", function()
+			store:AddEncounter("Kane", kill(1000, { me = "Yo-Mismo" }))
+			local kane = store:Get("Kane")
+			T.truthy(Store.HasEncounterNear(kane, Store.KILL, 1004, nil, "Yo-Mismo"))
+			T.falsy(Store.HasEncounterNear(kane, Store.KILL, 1004, nil, "Otro-Pj"))
+			T.truthy(Store.HasEncounterNear(kane, Store.KILL, 1004), "anyone's, when not said")
+		end)
+
+		it("tops up the totals of the character playing now, not anyone else's", function()
+			store:SetCharacter("Yo-Mismo")
+			store:AddEncounter("Kane", kill(1), nil, { silent = true })
+			T.truthy(store:EnsureTotals("Kane", 3, 1))
+			T.eq({ Store.ExtraFor(store:Get("Kane"), "Yo-Mismo") }, { 2, 1 })
+			T.falsy(store:EnsureTotals("Kane", 3, 1), "already there")
+
+			store:SetCharacter("Otro-Pj")
+			T.truthy(store:EnsureTotals("Kane", 2, 0), "the other character's fights do not count for him")
+			T.eq({ Store.ExtraFor(store:Get("Kane"), "Otro-Pj") }, { 2, 0 })
+			T.eq({ Store.Counts(store:Get("Kane")) }, { 5, 1 })
+		end)
+
+		it("keeps the imports of each character apart", function()
+			store:SetCharacter("Yo-Mismo")
+			store:MarkImported("spy", 10)
+			T.eq(store:ImportedAt("spy"), 10)
+			store:SetCharacter("Otro-Pj")
+			T.falsy(store:IsImported("spy"), "Spy keeps its data per character")
+			store:SetCharacter("Yo-Mismo")
+			T.truthy(store:IsImported("spy"))
+		end)
+	end)
+
+	describe("merging the record of a character", function()
+		local function charA()
+			return { version = 3, imports = { spy = 50 }, players = {
+				["Kane-Mochivich"] = { name = "Kane-Mochivich", guild = "Viejos", level = 30, class = "WARLOCK",
+					first = 100, last = 200, extraKills = 1, extraDeaths = 0, note = "Ganks at the dock",
+					encounters = { { t = 100, r = "K", zone = "Desolace" }, { t = 200, r = "D" } } },
+				["Test-Dummy"] = { name = "Test-Dummy", test = true, encounters = { { t = 1, r = "K" } }, extraKills = 0, extraDeaths = 0 },
+			} }
+		end
+		local function charB()
+			return { version = 3, imports = {}, players = {
+				["Kane-Mochivich"] = { name = "Kane-Mochivich", guild = "Nuevos", level = 40, race = "Humano",
+					first = 300, last = 300, extraKills = 0, extraDeaths = 0, note = "Healer now",
+					encounters = { { t = 300, r = "K", oppLevel = 40 } } },
+				["Ana-Uno"] = { name = "Ana-Uno", first = 250, last = 250, extraKills = 0, extraDeaths = 2, encounters = {} },
+			} }
+		end
+
+		it("adds all the fights of each character, oldest first, each with its character", function()
+			T.eq(store:MergeCharacter(charA(), "Alfa-Uno", 1000), { players = 1, fights = 2 })
+			T.eq(store:MergeCharacter(charB(), "Beta-Dos", 2000), { players = 2, fights = 1 })
+			local kane = store:Get("Kane-Mochivich")
+			local times, characters = {}, {}
+			for i, encounter in ipairs(kane.encounters) do
+				times[i], characters[i] = encounter.t, encounter.me
+			end
+			T.eq(times, { 100, 200, 300 })
+			T.eq(characters, { "Alfa-Uno", "Alfa-Uno", "Beta-Dos" })
+			T.eq(kane.encounters[1].zone, "Desolace")
+			T.eq({ Store.Counts(kane) }, { 3, 1 })
+			T.eq({ kane.first, kane.last }, { 100, 300 })
+			T.eq({ Store.Counts(store:Get("Ana-Uno")) }, { 0, 2 })
+			T.eq({ Store.ExtraFor(store:Get("Ana-Uno"), "Beta-Dos") }, { 0, 2 })
+			T.eq({ Store.ExtraFor(kane, "Alfa-Uno") }, { 1, 0 })
+		end)
+
+		it("takes what is known of the enemy from the record that saw him last, in any order", function()
+			store:MergeCharacter(charB(), "Beta-Dos", 1)
+			store:MergeCharacter(charA(), "Alfa-Uno", 2)
+			local kane = store:Get("Kane-Mochivich")
+			T.eq(kane.guild, "Nuevos")
+			T.eq(kane.level, 40)
+			T.eq(kane.race, "Humano")
+			T.eq(kane.class, "WARLOCK", "the older record fills what the newer did not know")
+		end)
+
+		it("keeps the note of one character as it is, and both when two wrote one, whole", function()
+			store:MergeCharacter(charA(), "Alfa-Uno", 1)
+			T.eq(store:Get("Kane-Mochivich").note, "Ganks at the dock")
+			local b = charB()
+			b.players["Kane-Mochivich"].note = string.rep("n", Store.NOTE_MAX_LENGTH)
+			store:MergeCharacter(b, "Beta-Dos", 2)
+			local note = store:Get("Kane-Mochivich").note
+			T.eq(note, "[Alfa Uno]\nGanks at the dock\n\n[Beta Dos]\n" .. string.rep("n", Store.NOTE_MAX_LENGTH))
+			T.truthy(ns.Util.Length(note) > Store.NOTE_MAX_LENGTH)
+			T.isNil(store:Get("Kane-Mochivich").noteFrom)
+
+			-- Loading it again keeps it whole; editing may shorten it but not make it longer.
+			local again = Store.New(store.data)
+			T.eq(again:Get("Kane-Mochivich").note, note)
+			T.falsy(again:SetNote("Kane-Mochivich", note .. "more"), "cannot grow")
+			T.truthy(again:SetNote("Kane-Mochivich", note:sub(1, 1020)))
+			T.eq(ns.Util.Length(again:Get("Kane-Mochivich").note), 1020)
+		end)
+
+		it("forgets where a note came from once the user edits it", function()
+			store:MergeCharacter(charA(), "Alfa-Uno", 1)
+			store:SetNote("Kane-Mochivich", "My own words")
+			store:MergeCharacter(charB(), "Beta-Dos", 2)
+			T.eq(store:Get("Kane-Mochivich").note, "My own words\n\n[Beta Dos]\nHealer now")
+		end)
+
+		it("leaves test data out and brings the character's imports along", function()
+			store:MergeCharacter(charA(), "Alfa-Uno", 1)
+			T.isNil(store:Get("Test-Dummy"))
+			store:SetCharacter("Alfa-Uno")
+			T.eq(store:ImportedAt("spy"), 50)
+		end)
+
+		it("leaves the old record as a backup, with the key of its character", function()
+			local old = charA()
+			store:MergeCharacter(old, "Alfa-Uno", 1)
+			T.eq(old.version, 4)
+			T.eq(#old.players["Kane-Mochivich"].encounters, 2)
+			T.eq(old.players["Kane-Mochivich"].encounters[1].me, "Alfa-Uno")
+			T.notNil(old.players["Test-Dummy"])
+			store:Get("Kane-Mochivich").encounters[1].zone = "Changed"
+			T.eq(old.players["Kane-Mochivich"].encounters[1].zone, "Desolace", "the account has copies")
+		end)
+
+		it("merges a character once: a second login adds nothing", function()
+			local old = charA()
+			store:MergeCharacter(old, "Alfa-Uno", 1000)
+			T.eq(store:Character("Alfa-Uno").merged, 1000)
+			T.isNil(store:MergeCharacter(old, "Alfa-Uno", 2000))
+			T.eq({ Store.Counts(store:Get("Kane-Mochivich")) }, { 2, 1 })
+		end)
+
+		it("tells listeners once, and only when something came in", function()
+			store:MergeCharacter(charA(), "Alfa-Uno", 1)
+			T.eq(fired, { "DATA_CHANGED" })
+			store:MergeCharacter({}, "Nuevo-Pj", 2)
+			T.eq(fired, { "DATA_CHANGED" }, "a new character brings nothing")
+			T.notNil(store:Character("Nuevo-Pj").merged)
+		end)
+
+		it("does not bring back what was deleted or reset", function()
+			local old = charA()
+			store:MergeCharacter(old, "Alfa-Uno", 1)
+			store:Delete("Kane-Mochivich")
+			T.isNil(store:MergeCharacter(old, "Alfa-Uno", 2))
+			T.isNil(store:Get("Kane-Mochivich"))
+
+			store:MergeCharacter(charB(), "Beta-Dos", 3)
+			store:Reset()
+			T.notNil(store:Character("Beta-Dos").merged, "reset keeps the characters")
+			T.isNil(store:MergeCharacter(charB(), "Beta-Dos", 4))
+			T.isNil(store:Get("Ana-Uno"))
+		end)
+
+		it("rebuilds the account record from the backups when it was lost", function()
+			local old = charA()
+			store:MergeCharacter(old, "Alfa-Uno", 1)
+			local fresh = Store.New({})
+			T.eq(fresh:MergeCharacter(old, "Alfa-Uno", 2), { players = 1, fights = 2 })
+			T.eq({ Store.Counts(fresh:Get("Kane-Mochivich")) }, { 2, 1 })
+		end)
+
+		it("never counts one fight twice", function()
+			local a = charA()
+			a.players["Kane-Mochivich"].encounters[3] = { t = 100, r = "K" } -- the same fight, saved twice
+			store:MergeCharacter(a, "Alfa-Uno", 1)
+			T.eq(#store:Get("Kane-Mochivich").encounters, 2)
+		end)
+
+		it("puts up with broken records", function()
+			T.eq(store:MergeCharacter(nil, "Alfa-Uno", 1), { players = 0, fights = 0 })
+			T.eq(store:MergeCharacter({ version = 3, players = { x = { encounters = { "nope", { t = "x", r = "K" }, { t = 4, r = "?" } } } } },
+				"Beta-Dos", 1), { players = 1, fights = 0 })
+			T.raises(function() store:MergeCharacter({}, nil, 1) end)
+		end)
 	end)
 end)

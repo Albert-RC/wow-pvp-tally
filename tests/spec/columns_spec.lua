@@ -32,7 +32,7 @@ describe("Columns", function()
 		T.eq(total(layout.player), Columns.LIST_WIDTH + 301)
 		T.eq(layout.player.name.width + layout.player.guild.width, 220 + 132 + 301)
 		T.eq(layout.player.kills.width, 56)
-		T.eq(layout.detail.zone.width, 308 + 301)
+		T.eq(layout.detail.zone.width, 238 + 301)
 		T.eq(layout.player.first.width, Columns.DATE_WIDTH, "the date column does not grow")
 	end)
 
@@ -45,6 +45,15 @@ describe("Columns", function()
 		local base = Columns.DETAIL_INDENT
 		for _, column in ipairs(Columns.DETAIL) do base = base + column.base end
 		T.eq(base, Columns.LIST_WIDTH)
+	end)
+
+	it("ends the fight rows with the user's character, wide enough for icon, name and level", function()
+		local layout = Columns.Layout(Columns.LIST_WIDTH)
+		T.eq(layout.detail[#layout.detail].key, "character")
+		T.eq(layout.detail.character.width, 140)
+		T.eq(layout.detail.character.label, "Character")
+		T.isNil(layout.detail.mine, "it took the place of my level")
+		T.eq(Columns.Layout(Columns.LIST_WIDTH + 301).detail.character.width, 140, "it does not grow")
 	end)
 
 	it("places columns one after another", function()

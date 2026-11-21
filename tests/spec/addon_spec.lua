@@ -40,7 +40,7 @@ describe("Addon", function()
 		it("targets the Forever client and declares the saved variables", function()
 			local fields = Addon.Toc().fields
 			T.eq(fields.Interface, "16001")
-			T.eq(fields.SavedVariables, "PvPTallyDB")
+			T.eq(fields.SavedVariables, "PvPTallyDB, PvPTallyAccountDB")
 			T.eq(fields.SavedVariablesPerCharacter, "PvPTallyCharDB")
 		end)
 
@@ -71,7 +71,7 @@ describe("Addon", function()
 		it("creates only its own globals", function()
 			local _, env = Addon.Start()
 			local allowed = {
-				PvPTallyDB = true, PvPTallyCharDB = true,
+				PvPTallyDB = true, PvPTallyAccountDB = true, PvPTallyCharDB = true,
 				SLASH_PVPTALLY1 = true, SLASH_PVPTALLY2 = true,
 				PvPTally_OnAddonCompartmentClick = true,
 			}
@@ -115,15 +115,98 @@ describe("Addon", function()
 			T.contains(env.__chat[1], "Imported from Spy: 1 players")
 
 			-- Next session: same saved data, no second import.
-			local _, env2 = Addon.Start({ globals = { SpyPerCharDB = SPY_DATA, PvPTallyCharDB = env.PvPTallyCharDB } })
+			local _, env2 = Addon.Start({ globals = { SpyPerCharDB = SPY_DATA, PvPTallyCharDB = env.PvPTallyCharDB, PvPTallyAccountDB = env.PvPTallyAccountDB } })
 			T.eq(#env2.__chat, 0)
 		end)
 
 		it("upgrades data saved by the previous version", function()
 			local old = { version = 1, spyImported = 123, players = { ["Kane-Mochivich"] = { encounters = { { t = 5, r = "K" } } } } }
 			local ns = Addon.Start({ globals = { PvPTallyCharDB = old, SpyPerCharDB = SPY_DATA } })
-			T.eq(ns.App.store.data.imports.spy, 123)
+			T.eq(ns.App.store:ImportedAt("spy"), 123)
 			T.isNil(ns.App.store:Get("Cabo-Trancas"), "already imported: not imported again")
+		end)
+
+		describe("the record of the account", function()
+			-- What a character saved up to v1.5.
+			local function OldRecord(fights)
+				return { version = 3, imports = {}, players = {
+					["Kane-Mochivich"] = { name = "Kane-Mochivich", encounters = fights, extraKills = 0, extraDeaths = 0 },
+				} }
+			end
+			local function As(name, surname)
+				return function(unit)
+					if unit == "player" then return name, surname end
+				end
+			end
+
+			it("folds the old record of the character into the account at login, once", function()
+				local old = OldRecord({ { t = 5, r = "K", myLevel = 30 } })
+				local ns, env = Addon.Start({ globals = { PvPTallyCharDB = old } })
+				local kane = ns.App.store:Get("Kane-Mochivich")
+				T.eq(#kane.encounters, 1)
+				T.eq(kane.encounters[1].me, Wow.PLAYER_KEY)
+				T.eq(ns.App.store:CurrentCharacter(), Wow.PLAYER_KEY)
+				T.contains(env.__chat[1], "The fights of Tester Probador joined the list of your account: 1 players, 1 fights")
+				T.truthy(env.PvPTallyAccountDB.players["Kane-Mochivich"] ~= nil, "saved in the account")
+				T.notNil(env.PvPTallyAccountDB.characters[Wow.PLAYER_KEY].merged)
+				T.eq(#env.PvPTallyCharDB.players["Kane-Mochivich"].encounters, 1, "the old record stays as a backup")
+
+				-- Next session: nothing new, nothing twice.
+				local ns2, env2 = Addon.Start({ globals = { PvPTallyCharDB = env.PvPTallyCharDB, PvPTallyAccountDB = env.PvPTallyAccountDB } })
+				T.eq(#ns2.App.store:Get("Kane-Mochivich").encounters, 1)
+				T.eq(#env2.__chat, 0)
+			end)
+
+			it("joins the records of two characters in one list", function()
+				local _, env = Addon.Start({ globals = { PvPTallyCharDB = OldRecord({ { t = 5, r = "K" } }) } })
+				local ns2 = Addon.Start({ globals = {
+					PvPTallyCharDB = OldRecord({ { t = 9, r = "D" } }),
+					PvPTallyAccountDB = env.PvPTallyAccountDB,
+					UnitName = As("Otro", "Pj"),
+				} })
+				local kane = ns2.App.store:Get("Kane-Mochivich")
+				T.eq({ ns2.Store.Counts(kane) }, { 1, 1 })
+				T.eq({ kane.encounters[1].me, kane.encounters[2].me }, { Wow.PLAYER_KEY, "Otro-Pj" })
+				local characters = 0
+				for _ in ns2.App.store:Characters() do characters = characters + 1 end
+				T.eq(characters, 2)
+			end)
+
+			it("records new fights for the character playing", function()
+				local ns = Addon.Start()
+				ns.App.AddSkullTest("Cabo Trancas")
+				T.eq(ns.App.store:Get("Cabo-Trancas").encounters[1].me, Wow.PLAYER_KEY)
+			end)
+
+			it("waits for the next login when the name of the character is not known yet", function()
+				local old = OldRecord({ { t = 5, r = "K" } })
+				local ns, env = Addon.Start({ globals = { PvPTallyCharDB = old, UnitName = function() return nil end } })
+				T.isNil(ns.App.store:Get("Kane-Mochivich"))
+				T.isNil(ns.App.store:CurrentCharacter())
+				T.isNil(ns.Util.lastError, "not an error")
+				T.notNil(ns.App.tracker, "the rest starts as usual")
+				T.eq(#env.__chat, 0)
+
+				local ns2 = Addon.Start({ globals = { PvPTallyCharDB = old, PvPTallyAccountDB = env.PvPTallyAccountDB } })
+				T.eq(#ns2.App.store:Get("Kane-Mochivich").encounters, 1)
+			end)
+
+			it("shows the character of each fight in the window", function()
+				local ns, env = Addon.Start({ globals = {
+					PvPTallyCharDB = OldRecord({ { t = 5, r = "K", myLevel = 30 } }),
+					UnitRace = function(unit) if unit == "player" then return "Gnoma", "Gnome" end end,
+				} })
+				ns.App.Toggle()
+				local frame = env.PvPTallyFrame
+				frame.ExpandButton:RunScript("OnClick")
+				local fight = frame.ScrollBox.__pool[3]
+				T.eq(fight.data.kind, "fight")
+				T.eq(fight.detail.character:GetText(), "Tester (30)")
+				T.truthy(fight.CharacterIcon:IsShown(), "his race icon")
+				local header = frame.ScrollBox.__pool[2]
+				T.eq(header.detail.character:GetText(), "Character")
+				T.falsy(header.CharacterIcon:IsShown())
+			end)
 		end)
 
 		it("puts the minimap button on the rim of the minimap, where LibDBIcon puts BugSack's", function()
@@ -282,10 +365,13 @@ describe("Addon", function()
 		-- Who is behind each nameplate token: unit -> { name, realm, enemy }.
 		local function Start(people, extra)
 			local globals = {
-				PvPTallyCharDB = KaneSaved(),
+				PvPTallyAccountDB = KaneSaved(),
 				UnitExists = function(unit) return people[unit] ~= nil end,
 				UnitIsPlayer = function(unit) return people[unit] ~= nil end,
-				UnitName = function(unit) return people[unit].name, people[unit].realm end,
+				UnitName = function(unit)
+					if unit == "player" then return Wow.PLAYER_NAME, Wow.PLAYER_SURNAME end -- the user
+					return people[unit].name, people[unit].realm
+				end,
 				UnitIsEnemy = function(_, unit) return people[unit] ~= nil and people[unit].enemy == true end,
 			}
 			for key, value in pairs(extra or {}) do globals[key] = value end
@@ -618,6 +704,21 @@ describe("Addon", function()
 					T.truthy(editor.Scroll.__scrollChild == box)
 				end)
 
+				it("opens a note joined from several characters whole, longer than one can write", function()
+					local key = firstRow().data.key
+					local long = "[Alfa Uno]\n" .. string.rep("a", 900) .. "\n\n[Beta Dos]\n" .. string.rep("b", 900)
+					ns.App.store:Get(key).note = long -- as a merge leaves it
+					local editor = openNote()
+					T.eq(editor.EditBox:GetMaxLetters(), ns.Util.Length(long))
+					T.eq(editor.EditBox:GetText(), long)
+					T.contains(editor.Count:GetText(), " / " .. ns.Util.Length(long))
+
+					-- The next note gets the usual limit again.
+					ns.App.store:SetNote(key, nil)
+					editor = openNote()
+					T.eq(editor.EditBox:GetMaxLetters(), ns.Store.NOTE_MAX_LENGTH)
+				end)
+
 				it("opens with the note the player has", function()
 					local key = firstRow().data.key
 					ns.App.store:SetNote(key, "Rogue\nAlways in stealth")
@@ -791,13 +892,16 @@ describe("Addon", function()
 	describe("notes on the game's tooltips", function()
 		local function Start(people, extra)
 			local globals = {
-				PvPTallyCharDB = { version = 3, players = {
+				PvPTallyAccountDB = { version = 3, players = {
 					["Kane-Mochivich"] = { name = "Kane", note = "Camps the flight master", encounters = { { t = 5, r = "K" } } },
 					["Ally-Nobody"] = { name = "Ally", encounters = { { t = 5, r = "D" } } },
 				} },
 				UnitExists = function(unit) return people[unit] ~= nil end,
 				UnitIsPlayer = function(unit) return people[unit] ~= nil end,
-				UnitName = function(unit) return people[unit].name, people[unit].realm end,
+				UnitName = function(unit)
+					if unit == "player" then return Wow.PLAYER_NAME, Wow.PLAYER_SURNAME end -- the user
+					return people[unit].name, people[unit].realm
+				end,
 			}
 			for key, value in pairs(extra or {}) do globals[key] = value end
 			return Addon.Start({ globals = globals })

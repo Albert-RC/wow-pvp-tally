@@ -32,9 +32,10 @@ Columns.PLAYER = {
 Columns.DETAIL = {
 	{ key = "result", label = L.D_RESULT, base = 116, justify = "LEFT" },
 	{ key = "date",   label = L.D_DATE,   base = 144, justify = "LEFT" },
-	{ key = "zone",   label = L.D_ZONE,   base = 308, grow = 1, justify = "LEFT" },
+	{ key = "zone",   label = L.D_ZONE,   base = 238, grow = 1, justify = "LEFT" },
 	{ key = "opp",    label = L.D_OPP,    base = 70,  justify = "CENTER" },
-	{ key = "mine",   label = L.D_MINE,   base = 70,  justify = "CENTER" },
+	-- The user's character: race icon, first name and his level then ("Kane (44)").
+	{ key = "character", label = L.D_CHARACTER, base = 140, justify = "LEFT" },
 }
 
 local function Place(definitions, start, listWidth)

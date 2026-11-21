@@ -14,6 +14,7 @@ files["PvPTally"] = {
 	globals = {
 		"PvPTallyDB",
 		"PvPTallyCharDB",
+		"PvPTallyAccountDB",
 		"SLASH_PVPTALLY1",
 		"SLASH_PVPTALLY2",
 		"PvPTally_OnAddonCompartmentClick",

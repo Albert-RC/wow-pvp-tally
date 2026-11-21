@@ -3,7 +3,8 @@
 Addon para **World of Warcraft: Forever** que registra cada kill y cada muerte en PvP de mundo.
 
 - Una fila por jugador enemigo con el que te has enfrentado: icono de clase, raza (con insignia de bando para los Cielonato, que pueden ser Alianza u Horda), nivel, hermandad, **Kills**, **Deaths** y fecha del primer encuentro.
-- Al hacer clic en una fila se despliega cada enfrentamiento: resultado, fecha y hora local, zona y subzona, nivel del rival y tu nivel.
+- **Un registro para toda la cuenta:** cada enemigo es una sola fila con los enfrentamientos de todos tus personajes. Al hacer clic en una fila se despliega cada enfrentamiento: resultado, fecha y hora local, zona y subzona, nivel del rival y **con qué personaje tuyo** fue (icono de raza, nombre y su nivel entonces). Los enfrentamientos sin detalle (importados o antiguos) salen agrupados por personaje.
+- **Fusión de los registros de antes:** hasta la v1.5 cada personaje tenía su propio registro. La primera vez que entras con cada personaje tras actualizar, su registro se une al de la cuenta (se avisa en el chat) y se guarda tal cual como copia de seguridad. No se pierde nada: se juntan todos los enfrentamientos, cada uno con su personaje, y si dos personajes tenían una nota distinta sobre el mismo jugador se conservan las dos, cada una con el nombre de su personaje. Los personajes con los que no hayas entrado todavía no salen en la lista hasta que entres con ellos.
 - Se puede ordenar por cualquier columna, buscar por nombre, hermandad o zona, borrar un jugador con clic derecho y redimensionar la ventana (dentro de unos límites).
 - **Notas:** cada jugador tiene un icono de nota en la última columna, apagado si no tiene nota y encendido si la tiene. Al hacer clic se abre un panel al lado de la ventana con una caja de texto de varias líneas (hasta 1000 caracteres, con contador) y los botones Guardar y Cancelar; guardarla vacía la borra y Escape cancela. **Mayús + clic derecho** en el icono borra la nota al momento (un clic derecho solo no hace nada). La nota sale entera en el tooltip de la fila y, resumida (4 líneas), en el tooltip del juego cuando pasas el ratón por ese jugador en el mundo o por su retrato. Ordenar por la columna pone primero a los que tienen nota.
 - **Calavera en las placas de nombre:** los jugadores que ya están en tu lista llevan una calavera a la izquierda del nombre en su placa, sean enemigos o no, en el mundo y en los campos de batalla. Solo se ve en las placas que muestra el juego (hay que tener activadas las de enemigos y aliados). Se puede desactivar o cambiar de tamaño en Opciones.
@@ -30,8 +31,8 @@ Copia (o enlaza) la carpeta `PvPTally/` en `World of Warcraft\_forever_\Interfac
 | `/tally import` | Importa o sincroniza los datos de Spy (igual que el botón de Opciones) |
 | `/tally notify` | Activa o desactiva a la vez los avisos de kills y de muertes en el chat. Cada uno por separado se elige en Opciones |
 | `/tally minimap` | Muestra u oculta el botón del minimapa |
-| `/tally reset` | Borra todos los datos de este personaje |
-| `/tally debug` | Muestra por qué se contó o no la última kill o muerte |
+| `/tally reset` | Borra todos los enfrentamientos registrados, los de todos tus personajes |
+| `/tally debug` | Muestra por qué se contó o no la última kill o muerte, y qué personaje está jugando y cuántos se han fusionado |
 | `/tally test` | Añade jugadores de prueba (Test Reg, con una nota, y todas las razas en hombre y mujer) |
 | `/tally test clear` | Borra los jugadores de prueba (también los de `/tally skull`) |
 | `/tally skull Nombre Apellido` | Añade ese jugador a la lista como jugador de prueba (con una kill inventada aquí y ahora) para ver la calavera en su placa sin pelear. Sin nombre, usa el jugador que tengas en el objetivo, aliado o enemigo. Un jugador que ya está en la lista no se toca |
@@ -55,7 +56,7 @@ PvPTally/
     Util.lua               valores secretos, textos, fechas, colores
     Events.lua             bus publicar/suscribir entre módulos
     Settings.lua           ajustes de cuenta (PvPTallyDB)
-    Store.lua              jugadores y enfrentamientos (PvPTallyCharDB), migraciones
+    Store.lua              jugadores y enfrentamientos de la cuenta (PvPTallyAccountDB), tus personajes, migraciones y fusión de los registros por personaje (PvPTallyCharDB)
     Races.lua              razas, iconos e insignias de bando (como descriptores)
   Game/
     WowApi.lua             adaptador: la única capa que lee la API de WoW
@@ -83,7 +84,7 @@ Reglas:
 
 - **Las dependencias van hacia dentro.** `Core` no conoce a nadie. `Game`, `Features` y `UI` usan `Core`. Solo `Init.lua` conoce todos los módulos y los conecta.
 - **Una sola puerta al juego.** Toda lectura de la API pasa por `Game/WowApi.lua`, que filtra los valores secretos. El `Tracker` recibe ese adaptador por parámetro, así que en los tests se le pasa un juego falso.
-- **Un solo dueño de los datos.** Solo `Store` escribe en `PvPTallyCharDB`. Avisa de los cambios por el bus (`DATA_CHANGED`, `ENCOUNTER_ADDED`), y la ventana y el chat escuchan sin que el almacén sepa que existen.
+- **Un solo dueño de los datos.** Solo `Store` escribe en `PvPTallyAccountDB` (el registro de la cuenta) y en `PvPTallyCharDB` (el registro de cada personaje hasta la v1.5, que queda como copia de seguridad). Avisa de los cambios por el bus (`DATA_CHANGED`, `ENCOUNTER_ADDED`), y la ventana y el chat escuchan sin que el almacén sepa que existen.
 - **Lógica separada de los widgets.** Lo que se puede decidir sin dibujar (columnas, orden, filtros, iconos) es puro y está testeado; los widgets solo pintan.
 - **Datos guardados versionados.** `Store.Migrate` actualiza los datos de versiones anteriores paso a paso y descarta lo mal formado.
 - **Sin globales propias** salvo los SavedVariables, los comandos `/tally` y la función del menú de addons; cada módulo cuelga del espacio de nombres del addon.

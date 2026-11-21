@@ -5,7 +5,9 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 ## Features
 
 - **One row per enemy:** class icon, race (with faction badge for Skyborne), level, guild, **Kills**, **Deaths** and date of first encounter.
-- **Fight details:** click a row to see each encounter: result, local date and time, zone and subzone, and both levels.
+- **One list for your whole account:** each enemy is one row with the fights of all your characters.
+- **Fight details:** click a row to see each encounter: result, local date and time, zone and subzone, the enemy's level and which of your characters fought it (race icon, name and level).
+- **Your old records are kept:** up to v1.5 each character had a list of its own. The first time you log in with each character, its list joins the account one, with every fight and every note.
 - **Group kills:** a killing blow by your party or raid counts if you took part in the fight.
 - **Skull on nameplates:** players already in your list get a skull next to their name on their nameplate, friend or foe, in the open world and in battlegrounds. Its size (small, medium or large) and whether it shows are chosen in the options.
 - **Skull on the portrait:** in case another addon replaces the nameplates, the portrait of your target and focus is covered with a skull when they are in your list. Can be turned off in the options.
@@ -26,7 +28,7 @@ Keeps a tally of every **world PvP** kill and death in **World of Warcraft: Fore
 | `/tally import` | Import data from Spy |
 | `/tally notify` | Turn all chat notifications on or off |
 | `/tally minimap` | Show or hide the minimap button |
-| `/tally reset` | Delete all data for this character |
+| `/tally reset` | Delete all recorded fights, those of all your characters |
 | `/tally test` | Add sample players to preview the window (`/tally test clear` removes them) |
 | `/tally skull First Last` | Add that player (or your target, without a name) as a test player, to see the skull without fighting them (`/tally test clear` removes them) |
 | `/tally debug` | Show why the last kill or death was or wasn't counted |

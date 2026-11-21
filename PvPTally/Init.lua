@@ -2,8 +2,9 @@
 -- game. The only file that knows every module.
 --
 --   ADDON_LOADED  saved variables are ready: settings, store, races, UI, options panel, commands
---   PLAYER_LOGIN  the world is ready: tracker, nameplate and portrait skulls, notes on the
---                 unit tooltips, minimap button, first-run Spy import
+--   PLAYER_LOGIN  the world is ready: the character joins the account record (his old
+--                 record merged once), tracker, nameplate and portrait skulls, notes on
+--                 the unit tooltips, minimap button, first-run Spy import
 
 local ADDON_NAME, ns = ...
 local L, Util = ns.L, ns.Util
@@ -162,11 +163,14 @@ end
 
 local function OnAddonLoaded()
 	PvPTallyDB = ns.Settings.Init(PvPTallyDB)
+	if type(PvPTallyAccountDB) ~= "table" then
+		PvPTallyAccountDB = {}
+	end
 	if type(PvPTallyCharDB) ~= "table" then
 		PvPTallyCharDB = {}
 	end
 	App.settings = PvPTallyDB
-	App.store = ns.Store.New(PvPTallyCharDB, ns.bus)
+	App.store = ns.Store.New(PvPTallyAccountDB, ns.bus)
 	App.races = ns.Races.NewResolver(ns.WowApi.RaceInfo, ns.WowApi.AtlasExists, CLASS_ICON_TCOORDS)
 
 	ns.Window.Init(App)
@@ -257,7 +261,26 @@ local function StartTooltipNotes()
 	end))
 end
 
+-- The record is the account's: tells it who is playing, and the first time this character
+-- logs in, folds in the record he kept on his own up to v1.5 (left as it was, as a backup).
+-- Without the name of the character nothing is merged; the next login tries again.
+local function JoinAccount()
+	local me, info = ns.WowApi.MyCharacter()
+	if not me then
+		return -- /tally debug shows the character as unknown
+	end
+	App.store:SetCharacter(me, info)
+	local merged = App.store:MergeCharacter(PvPTallyCharDB, me, ns.WowApi.Time())
+	if merged and merged.players > 0 then
+		Util.Print(L.MERGED:format(Util.DisplayName(me), merged.players, merged.fights))
+	end
+end
+
 local function OnPlayerLogin()
+	local ok, err = pcall(JoinAccount)
+	if not ok then
+		Util.ReportError("JoinAccount", err)
+	end
 	StartTracker()
 	StartNameplateMarks()
 	StartPortraitMarks()

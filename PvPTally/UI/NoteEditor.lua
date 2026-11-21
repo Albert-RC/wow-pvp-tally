@@ -21,6 +21,7 @@ local SOUND_CLICK = SOUNDKIT and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or 856
 local frame
 local app -- { store }
 local key -- the player whose note is open
+local limit = Store.NOTE_MAX_LENGTH -- letters the open note may have (Store.NoteLimit)
 
 -- The vertical scroll that keeps the cursor in sight: offset is the current scroll,
 -- viewHeight what the box shows, cursorTop and cursorHeight where the cursor is, measured
@@ -42,7 +43,7 @@ local function Refresh()
 	local editBox = frame.EditBox
 	local text = editBox:GetText() or ""
 	frame.Placeholder:SetShown(text == "")
-	frame.Count:SetText(L.NOTE_COUNT:format(editBox:GetNumLetters(), Store.NOTE_MAX_LENGTH))
+	frame.Count:SetText(L.NOTE_COUNT:format(editBox:GetNumLetters(), limit))
 end
 
 local function Save()
@@ -164,6 +165,9 @@ function NoteEditor.Open(playerKey, parent)
 	end
 	key = playerKey
 	frame.PlayerName:SetText(Util.ColoredName(playerKey, player.class))
+	-- Before the text: the box would cut a note joined from several characters.
+	limit = Store.NoteLimit(player.note)
+	frame.EditBox:SetMaxLetters(limit)
 	frame.EditBox:SetText(player.note or "")
 	Refresh()
 	frame:Show()
