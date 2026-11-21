@@ -87,7 +87,8 @@ function SpyImport.Run(store, spyData, mapName, now)
 			info.class = info.class or entry.c
 			info.guild = info.guild or entry.g
 			local player = store:Get(entry.n)
-			if not (player and Store.HasEncounterNear(player, fightResult, entry.t)) then
+			-- Spy's data is the character playing now's: only his fights can be this one.
+			if not (player and Store.HasEncounterNear(player, fightResult, entry.t, nil, store:CurrentCharacter())) then
 				store:AddEncounter(entry.n, {
 					t = entry.t,
 					r = fightResult,
@@ -96,6 +97,7 @@ function SpyImport.Run(store, spyData, mapName, now)
 					x = entry.x,
 					y = entry.y,
 					oppLevel = tonumber(entry.l),
+					oppGuild = type(entry.g) == "string" and entry.g ~= "" and entry.g or nil,
 					how = SpyImport.SOURCE,
 				}, info, { silent = true })
 				result.fights = result.fights + 1

@@ -50,6 +50,15 @@ end
 local function PrintDebug()
 	local tracker = app.tracker
 	Util.Print(("world PvP here: %s"):format(tostring(ns.WowApi.IsWorldPvP())))
+	local store, characters, merged = app.store, 0, 0
+	if store then
+		for _, character in store:Characters() do
+			characters = characters + 1
+			merged = merged + (character.merged and 1 or 0)
+		end
+		Util.Print(("character: %s; account: %d characters, %d merged"):format(
+			store:CurrentCharacter() or "unknown, old record not merged this session", characters, merged))
+	end
 	if tracker then
 		Util.Print(("enemies cached: %d"):format(tracker.cacheCount))
 		if tracker.lastKill then

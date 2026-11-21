@@ -68,6 +68,12 @@ function Util.FirstCharacters(text, count)
 	return text, false
 end
 
+-- How many characters a UTF-8 text has (letters, as the edit boxes count them).
+function Util.Length(text)
+	local _, count = tostring(text or ""):gsub("[^\128-\191]", "")
+	return count
+end
+
 -- Player keys are "First-Surname" (the realm slot holds the surname on Forever), the
 -- same key Spy uses. Shown with a space: "Cabo-Trancas" -> "Cabo Trancas".
 function Util.DisplayName(key)

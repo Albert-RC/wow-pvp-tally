@@ -4,8 +4,11 @@
 -- Row kinds:
 --   player  one enemy player              { key, player, name, kills, deaths, first, index }
 --   header  titles above his fights       { key }
---   fight   one fight                     { key, player, encounter }
---   extra   fights counted w/o details    { key, kills, deaths }
+--   fight   one fight                     { key, player, encounter, character }
+--   extra   fights counted w/o details    { key, kills, deaths, characterKey, character }
+--
+-- character is the record of the user's character that fought (Store:Character), nil
+-- when not known; an extra row has one per character, and one without for the rest.
 
 local _, ns = ...
 local Util, Store = ns.Util, ns.Store
@@ -99,6 +102,39 @@ local function NewestFirst(a, b)
 	return (a.t or 0) > (b.t or 0)
 end
 
+-- The rows of the counts without details of a player: one per character of the user,
+-- by name, then what is not known to be anyone's.
+function ListModel.ExtraRows(store, key, player)
+	local rows, givenKills, givenDeaths = {}, 0, 0
+	for me, counts in pairs(player.extraByCharacter or {}) do
+		rows[#rows + 1] = {
+			kind = "extra", key = key, kills = counts.kills, deaths = counts.deaths,
+			characterKey = me, character = store:Character(me),
+		}
+		givenKills, givenDeaths = givenKills + counts.kills, givenDeaths + counts.deaths
+	end
+	table.sort(rows, function(a, b) return a.characterKey:lower() < b.characterKey:lower() end)
+	local kills = math.max(0, (player.extraKills or 0) - givenKills)
+	local deaths = math.max(0, (player.extraDeaths or 0) - givenDeaths)
+	if kills + deaths > 0 then
+		rows[#rows + 1] = { kind = "extra", key = key, kills = kills, deaths = deaths }
+	end
+	return rows
+end
+
+-- The first name of one of the user's characters, with his level when known: "Kane (44)".
+-- "-" for a fight whose character is not known.
+function ListModel.CharacterText(characterKey, level)
+	if type(characterKey) ~= "string" or characterKey == "" then
+		return "-"
+	end
+	local name = characterKey:match("^([^%-]+)") or characterKey
+	if type(level) == "number" and level > 0 then
+		return ("%s (%d)"):format(name, level)
+	end
+	return name
+end
+
 -- options: { filter = text, sortKey, ascending, expanded = { [key] = true } }.
 -- Returns rows, totals { players, kills, deaths } of what is shown, and the player count.
 function ListModel.Build(store, options)
@@ -149,11 +185,13 @@ function ListModel.Build(store, options)
 			end
 			table.sort(fights, NewestFirst)
 			for _, encounter in ipairs(fights) do
-				rows[#rows + 1] = { kind = "fight", key = item.key, player = item.player, encounter = encounter }
+				rows[#rows + 1] = {
+					kind = "fight", key = item.key, player = item.player, encounter = encounter,
+					character = store:Character(encounter.me),
+				}
 			end
-			local extraKills, extraDeaths = item.player.extraKills or 0, item.player.extraDeaths or 0
-			if extraKills + extraDeaths > 0 then
-				rows[#rows + 1] = { kind = "extra", key = item.key, kills = extraKills, deaths = extraDeaths }
+			for _, row in ipairs(ListModel.ExtraRows(store, item.key, item.player)) do
+				rows[#rows + 1] = row
 			end
 		end
 	end

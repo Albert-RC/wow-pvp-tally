@@ -25,6 +25,30 @@ describe("WowApi", function()
 		env.UnitFactionGroup = function(unit) return units[unit].faction end
 	end)
 
+	describe("MyCharacter", function()
+		it("reads the user's own character, surname included", function()
+			units.player = { name = "Yo", realm = "Mismo", class = "MAGE", race = "Gnoma", raceFile = "Gnome", sex = 3,
+				level = 30, faction = "Alliance" }
+			local key, info = Api.MyCharacter()
+			T.eq(key, "Yo-Mismo")
+			T.eq(info, { class = "MAGE", race = "Gnoma", raceFile = "Gnome", sex = 3, faction = "Alliance", level = 30 })
+		end)
+
+		it("is nil while the client does not know the name yet", function()
+			units.player = { name = "Unknown" }
+			T.isNil(Api.MyCharacter())
+			units.player = { name = "" }
+			T.isNil(Api.MyCharacter())
+		end)
+
+		it("works without a surname and filters secret values", function()
+			units.player = { name = "Yo", realm = env.Secret("Mismo"), level = 0 }
+			local key, info = Api.MyCharacter()
+			T.eq(key, "Yo")
+			T.isNil(info.level)
+		end)
+	end)
+
 	describe("ReadEnemy", function()
 		it("reads an enemy player", function()
 			local key, info = Api.ReadEnemy("target")

@@ -17,6 +17,10 @@
 
 local Wow = {}
 
+-- The character the user plays in every environment, unless a test says otherwise.
+Wow.PLAYER_NAME, Wow.PLAYER_SURNAME = "Tester", "Probador"
+Wow.PLAYER_KEY = Wow.PLAYER_NAME .. "-" .. Wow.PLAYER_SURNAME
+
 -- Frames ----------------------------------------------------------------------------------
 -- Unknown Capitalized keys are either methods the fake does not model or template children
 -- (frame.Inset, check.Text). They give a child frame that works as both: called as a
@@ -391,7 +395,14 @@ function Wow.NewEnv(options)
 	-- Game state readers: nothing in sight, open world, no recap. Tests override them.
 	env.UnitExists = function() return false end
 	env.UnitIsPlayer = function() return false end
-	env.UnitName = function() return nil end
+	-- The user's own character has a name even with nothing in sight (Forever gives the
+	-- surname as the second value, like for any player).
+	env.UnitName = function(unit)
+		if unit == "player" then
+			return Wow.PLAYER_NAME, Wow.PLAYER_SURNAME
+		end
+		return nil
+	end
 	env.UnitIsEnemy = function() return false end
 	env.UnitGUID = function() return nil end
 	env.UnitClass = function() return nil end

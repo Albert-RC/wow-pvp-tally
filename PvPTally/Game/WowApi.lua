@@ -77,6 +77,31 @@ function WowApi.ReadPlayer(unit)
 	}
 end
 
+-- The character the user is playing: key ("First-Surname", like any player's: on Forever
+-- UnitName("player") gives the surname as the second value) and { class, race, raceFile,
+-- sex, faction, level }. nil while the client does not know the name yet.
+function WowApi.MyCharacter()
+	local name, surname = UnitName("player")
+	name, surname = R(name), R(surname)
+	if type(name) ~= "string" or name == "" or name == UNKNOWNOBJECT then
+		return nil
+	end
+	if type(surname) == "string" and surname ~= "" then
+		name = name .. "-" .. surname
+	end
+	local _, class = UnitClass("player")
+	local race, raceFile = UnitRace("player")
+	local level = tonumber(R(UnitLevel("player")))
+	return name, {
+		class = R(class),
+		race = R(race),
+		raceFile = R(raceFile),
+		sex = tonumber(R(UnitSex("player"))),
+		faction = R((UnitFactionGroup("player"))),
+		level = level and level > 0 and level or nil,
+	}
+end
+
 -- The same, for an enemy player only.
 function WowApi.ReadEnemy(unit)
 	if not WowApi.PlayerKey(unit) or not R(UnitIsEnemy("player", unit)) then

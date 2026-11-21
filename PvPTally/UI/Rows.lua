@@ -19,6 +19,7 @@ local CLASS_ICON_SIZE = 26
 local RACE_ICON_SIZE = 30
 local FACTION_BADGE_SIZE = 16
 local RESULT_ICON_SIZE = 20
+local CHARACTER_ICON_SIZE = 18
 local NOTE_SIZE = 20
 local NOTE_DIM_ALPHA = 0.35 -- the note button of a player without a note
 local NAME_OFFSET = 4 + EXPAND_SIZE + 4 + CLASS_ICON_SIZE + 6 -- where the name starts
@@ -119,6 +120,14 @@ local function ShowFightTooltip(row, data)
 	GameTooltip:AddLine(ListModel.ZoneText(encounter), 1, 1, 1)
 	if encounter.x and encounter.y then
 		GameTooltip:AddLine(L.TT_COORDS:format(encounter.x * 100, encounter.y * 100), 0.8, 0.8, 0.8)
+	end
+	if encounter.me then
+		local character = data.character
+		local name = Util.DisplayName(encounter.me)
+		if encounter.myLevel then
+			name = name .. " (" .. encounter.myLevel .. ")"
+		end
+		GameTooltip:AddDoubleLine(L.TT_CHARACTER, name, GOLD[1], GOLD[2], GOLD[3], Util.ClassColor(character and character.class))
 	end
 	local how = encounter.how and rawget(L, "HOW_" .. encounter.how)
 	if how then
@@ -263,6 +272,10 @@ function Rows.Setup(row)
 
 	row.detail = MakeCells(row, ns.Columns.DETAIL, "GameFontHighlightSmall")
 
+	-- The race icon of the user's character in a fight row, before his name.
+	row.CharacterIcon = row:CreateTexture(nil, "ARTWORK")
+	row.CharacterIcon:SetSize(CHARACTER_ICON_SIZE, CHARACTER_ICON_SIZE)
+
 	row.Extra = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	row.Extra:SetPoint("LEFT", ns.Columns.DETAIL_INDENT + 4, 0)
 	row.Extra:SetPoint("RIGHT", -4, 0)
@@ -286,21 +299,27 @@ function Rows.Layout(row, layout)
 	row.cells.name:SetPoint("LEFT", row, "LEFT", NAME_OFFSET, 0)
 	row.cells.name:SetWidth(name.width - NAME_OFFSET - 2)
 	PlaceCells(row, row.detail, layout.detail)
+	local character = layout.detail.character
+	row.CharacterIcon:ClearAllPoints()
+	row.CharacterIcon:SetPoint("LEFT", row, "LEFT", character.x + 4, 0)
 	row.detailShifted = nil
 end
 
--- Moves the result cell of a fight row after its icon, or back for the header row.
+local function ShiftCell(row, cell, column, offset)
+	cell:ClearAllPoints()
+	cell:SetPoint("LEFT", row, "LEFT", column.x + offset, 0)
+	cell:SetWidth(column.width - offset - 4)
+end
+
+-- Moves the result and character cells of a fight row after their icons, or back for
+-- the header row (its titles start where the icons do).
 local function ShiftResult(row, layout, shifted)
 	if row.detailShifted == shifted then
 		return
 	end
 	row.detailShifted = shifted
-	local column = layout.detail.result
-	local offset = shifted and (RESULT_ICON_SIZE + 6) or 4
-	local cell = row.detail.result
-	cell:ClearAllPoints()
-	cell:SetPoint("LEFT", row, "LEFT", column.x + offset, 0)
-	cell:SetWidth(column.width - offset - 4)
+	ShiftCell(row, row.detail.result, layout.detail.result, shifted and (RESULT_ICON_SIZE + 6) or 4)
+	ShiftCell(row, row.detail.character, layout.detail.character, shifted and (CHARACTER_ICON_SIZE + 8) or 4)
 end
 
 -- Filling -------------------------------------------------------------------------------------------
@@ -374,9 +393,26 @@ local function FillFight(row, data, view)
 	cells.date:SetText(Util.FormatDate(encounter.t, true))
 	cells.zone:SetText(ListModel.ZoneText(encounter))
 	cells.opp:SetText(ListModel.LevelText(encounter.oppLevel))
-	cells.mine:SetText(ListModel.LevelText(encounter.myLevel))
-	for _, key in ipairs({ "date", "zone", "opp", "mine" }) do
+	for _, key in ipairs({ "date", "zone", "opp" }) do
 		SetColor(cells[key], WHITE)
+	end
+
+	local character = data.character
+	cells.character:SetText(ListModel.CharacterText(encounter.me, encounter.myLevel))
+	cells.character:SetTextColor(Util.ClassColor(character and character.class))
+	local icon = character and view.races:Icon(character)
+	row.CharacterIcon:SetShown(icon ~= nil)
+	if icon then
+		Rows.ApplyIcon(row.CharacterIcon, icon)
+	end
+end
+
+-- Counts without details: of one of the user's characters, or of nobody known.
+local function FillExtra(row, data)
+	if data.characterKey then
+		row.Extra:SetText(L.EXTRA_CHARACTER:format(ListModel.CharacterText(data.characterKey), data.kills, data.deaths))
+	else
+		row.Extra:SetText(L.EXTRA:format(data.kills, data.deaths))
 	end
 end
 
@@ -393,6 +429,7 @@ function Rows.Init(row, data, view)
 	row.ClassIcon:SetShown(kind == "player")
 	row.NoteButton:SetShown(kind == "player")
 	row.ResultIcon:SetShown(kind == "fight")
+	row.CharacterIcon:Hide() -- FillFight shows it when the character is known
 	row.Extra:SetShown(kind == "extra")
 	if kind ~= "player" then
 		row.RaceIcon:Hide()
@@ -408,6 +445,6 @@ function Rows.Init(row, data, view)
 	elseif kind == "fight" then
 		FillFight(row, data, view)
 	elseif kind == "extra" then
-		row.Extra:SetText(L.EXTRA:format(data.kills, data.deaths))
+		FillExtra(row, data)
 	end
 end

@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.6.0 (2026-11-21)
+
+- Your list now covers your whole account: each enemy is one row with the fights of all your characters, not one list per character.
+- Open an enemy to see which of your characters fought each fight, with its race icon, name and level at the time. Fights without details (imported or old) are shown per character too.
+- Nothing is lost: the first time you log in with each character after updating, the list it had joins the account one, and the chat tells you how many players and fights came in. Characters you have not logged in with yet show up once you do.
+- If two of your characters wrote a different note on the same player, both notes are kept, each under the name of its character, even when together they are longer than 1000 characters.
+- Each fight now also keeps the enemy's guild at that moment.
+- Each player keeps up to 500 fights with details, instead of 250.
+- `/tally reset` now deletes the fights of all your characters, and its warning says so.
+- If you go back to version 1.5 or earlier, each character shows its list as it was on the day it joined the account list, without the fights recorded after that.
+
 ## v1.5.1 (2026-11-18)
 
 - The minimap button now sits on the edge of the minimap, in line with the other addon buttons, instead of slightly inside it.
